@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import BlurText from '../common/BlurText';
 import { Search, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Button from '../common/Button';
@@ -17,9 +18,28 @@ const HeroSection = () => {
           className="text-center mb-12"
         >
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Your Trusted Hub for<br />
-            <span className="text-gradient">Freelance in India</span>
+            {/* Animated heading: words animate from top with blur -> clear */}
+            {/* Using BlurText for word-by-word entrance */}
+            <span className="block">
+              <BlurText
+                text={"Your Trusted Hub for"}
+                delay={120}
+                animateBy="words"
+                direction="top"
+                className="block"
+              />
+            </span>
+            <span className="text-gradient block">
+              <BlurText
+                text={"Freelance in India"}
+                delay={120}
+                animateBy="words"
+                direction="top"
+                className="inline-block"
+              />
+            </span>
           </h1>
+
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
             Connect with top talent or find your next project. Secure payments, AI matching, and transparent communication - all built for India.
           </p>

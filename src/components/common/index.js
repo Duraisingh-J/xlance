@@ -6,3 +6,4 @@ export { default as Navbar } from './Navbar';
 export { default as Footer } from './Footer';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as PageTransition } from './PageTransition';
+// LoadingScreen removed — use PageTransition + LoadingSpinner if needed

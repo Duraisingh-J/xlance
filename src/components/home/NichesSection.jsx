@@ -8,16 +8,26 @@ import { Link } from 'react-router-dom';
 const NichesSection = () => {
   const getIcon = (iconName) => {
     const iconMap = {
-      Code: <Icons.Code size={40} />,
-      Smartphone: <Icons.Smartphone size={40} />,
-      Palette: <Icons.Palette size={40} />,
-      TrendingUp: <Icons.TrendingUp size={40} />,
+      Code: <Icons.Code size={48} />,
+      Smartphone: <Icons.Smartphone size={48} />,
+      Palette: <Icons.Palette size={48} />,
+      TrendingUp: <Icons.TrendingUp size={48} />,
     };
-    return iconMap[iconName] || <Icons.Sparkles size={40} />;
+    return iconMap[iconName] || <Icons.Sparkles size={48} />;
+  };
+
+  const getGradientClasses = (id) => {
+    const gradients = {
+      1: 'bg-gradient-to-br from-orange-400 to-red-500',
+      2: 'bg-gradient-to-br from-green-400 to-emerald-500',
+      3: 'bg-gradient-to-br from-blue-400 to-indigo-500',
+      4: 'bg-gradient-to-br from-yellow-400 to-amber-500',
+    };
+    return gradients[id] || 'bg-gradient-to-br from-gray-400 to-gray-500';
   };
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-transparent to-primary-50">
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0 }}
@@ -29,26 +39,26 @@ const NichesSection = () => {
           <p className="text-gray-600 text-lg">Explore the most popular services on our platform</p>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           {NICHES.map((niche, index) => (
             <motion.div
               key={niche.id}
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`${niche.color} rounded-2xl p-8 text-center hover:shadow-lg transition-all duration-300 cursor-pointer`}
+              className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col items-center text-center"
             >
-              <div className="flex justify-center mb-4 text-gray-700">
+              <div className={`${getGradientClasses(niche.id)} rounded-2xl p-6 mb-4 text-white shadow-lg transform hover:scale-110 transition-transform duration-300`}>
                 {getIcon(niche.icon)}
               </div>
-              <h3 className="font-semibold text-gray-900">{niche.name}</h3>
+              <h3 className="font-semibold text-gray-900 text-lg">{niche.name}</h3>
             </motion.div>
           ))}
         </div>
 
         <div className="text-center">
           <Link to="/">
-            <Button variant="ghost" size="lg">
+            <Button variant="ghost" size="lg" className="text-primary-600 hover:text-primary-700">
               Explore more niches →
             </Button>
           </Link>
