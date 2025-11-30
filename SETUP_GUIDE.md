@@ -17,48 +17,38 @@ cd xlance
 npm install
 ```
 
-### Step 3: Create Supabase Project
+### Step 3: Choose & configure a cloud backend (Firebase or managed DB)
 
-1. Go to [supabase.com](https://supabase.com)
-2. Sign up or log in
-3. Create a new project
-4. Note your:
-   - Project URL
-   - Anon Key (public)
-   - Service Role Key (keep secret)
+Xlance no longer includes Supabase migrations or a local database setup. Choose a cloud provider for authentication, data storage, and file storage (for example, Firebase Auth + Firestore + Cloud Storage), then configure the project credentials in environment variables.
+
+1. Select a provider (Firebase, AWS Amplify, or another managed service).
+2. Create a new project in the provider console.
+3. Collect the provider credentials required for client SDK initialization.
 
 ### Step 4: Configure Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (or edit an existing one):
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your Supabase credentials:
+Edit `.env` and add your provider credentials. Example for Firebase:
 
 ```env
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
 ```
 
-### Step 5: Apply Database Migrations
+### Step 5: Provision Schema / Storage
 
-The database schema is automatically set up through Supabase migrations:
+Schema and storage provisioning depend on the chosen provider. Follow the provider documentation for creating collections/tables, indexes, and storage buckets. If you maintain migrations separately, run them using your provider's CLI or dashboard.
 
-1. Go to your Supabase project dashboard
-2. Navigate to SQL Editor
-3. Run each migration in order:
-   - 001_create_users_table
-   - 002_create_freelancer_profiles_table
-   - 003_create_client_profiles_table
-   - 004_create_jobs_table
-   - 005_create_proposals_table
-   - 006_create_messages_table
-   - 007_create_payments_table
-   - 008_create_reviews_table
-
-Or use the Supabase migrations API (if setting up programmatically).
+If you want, I can add a Firebase example scaffold (initialization + sample rules) and helper utilities to replace the previous Supabase-specific code.
 
 ### Step 6: Start Development Server
 
@@ -80,6 +70,7 @@ The app will be available at `http://localhost:5173`
 ### 1. Authentication
 
 **Sign Up Flow:**
+
 - Visit `/auth/signup`
 - Enter name, email, password
 - Select role (Freelancer or Client)
@@ -87,6 +78,7 @@ The app will be available at `http://localhost:5173`
 - Profile created in users table
 
 **Sign In Flow:**
+
 - Visit `/auth/signin`
 - Enter email and password
 - Redirected to dashboard
@@ -103,6 +95,7 @@ The app will be available at `http://localhost:5173`
 ### 3. Freelancer Dashboard
 
 Shows:
+
 - Active projects count
 - Total earnings
 - Rating
@@ -112,6 +105,7 @@ Shows:
 ### 4. Client Dashboard
 
 Shows:
+
 - Posted jobs count
 - Freelancers hired
 - Total spent
@@ -138,6 +132,7 @@ updated_at (timestamptz)
 ```
 
 **Policies:**
+
 - Users can read/update their own profile
 - Public cannot access
 
@@ -155,6 +150,7 @@ rating (numeric, 0-5)
 ```
 
 **Policies:**
+
 - Freelancers can read/update own profile
 - Public can view (browsing)
 - Clients can view (hiring)
@@ -172,6 +168,7 @@ posted_jobs (integer)
 ```
 
 **Policies:**
+
 - Clients can read/update own profile
 - Only own access for write operations
 
@@ -194,6 +191,7 @@ created_at (timestamptz)
 ```
 
 **Policies:**
+
 - Clients can create/update/delete own
 - Freelancers can view open jobs
 - Public can view open jobs
@@ -213,6 +211,7 @@ created_at (timestamptz)
 ```
 
 **Policies:**
+
 - Freelancers can create proposals
 - Each freelancer can propose once per job
 - Clients can view proposals for own jobs
@@ -232,6 +231,7 @@ created_at (timestamptz)
 ```
 
 **Policies:**
+
 - Users can only read their own messages
 - Users can send messages
 
@@ -264,6 +264,7 @@ created_at (timestamptz)
 ```
 
 **Policies:**
+
 - Public can view all reviews
 - Users can create reviews
 - One review per job per user (unique constraint)
@@ -289,7 +290,7 @@ Edit `src/utils/constants.ts`:
 
 ```ts
 export const SERVICES = [
-  { id: 1, name: 'Your Service', icon: 'IconName' },
+  { id: 1, name: "Your Service", icon: "IconName" },
   // Add more...
 ];
 ```
@@ -302,8 +303,8 @@ Edit `src/utils/constants.ts`:
 export const HOW_IT_WORKS = [
   {
     step: 1,
-    title: 'Your Title',
-    description: 'Your Description',
+    title: "Your Title",
+    description: "Your Description",
   },
   // Add more...
 ];
@@ -322,14 +323,16 @@ Creates optimized production build in `dist/` folder.
 ### Deploy to Vercel
 
 1. **Connect Git Repository:**
+
    ```bash
    npm install -g vercel
    vercel
    ```
 
 2. **Set Environment Variables:**
+
    - In Vercel dashboard → Project Settings → Environment Variables
-   - Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+   - Add your cloud provider variables (see `SETUP_GUIDE.md` for examples)
 
 3. **Deploy:**
    ```bash
@@ -339,15 +342,18 @@ Creates optimized production build in `dist/` folder.
 ### Deploy to Netlify
 
 1. **Connect GitHub Repository:**
+
    - Go to netlify.com
    - Click "New site from Git"
    - Connect GitHub repo
 
 2. **Configure Build Settings:**
+
    - Build command: `npm run build`
    - Publish directory: `dist`
 
 3. **Set Environment Variables:**
+
    - Site settings → Build & deploy → Environment
    - Add variables
 
@@ -357,33 +363,27 @@ Creates optimized production build in `dist/` folder.
 
 ### Environment Variables for Production
 
-Create `.env.production`:
-
-```env
-VITE_SUPABASE_URL=https://your-prod-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-prod-anon-key
-```
+Create `.env.production` with production provider credentials (example for Firebase in `SETUP_GUIDE.md`)
 
 ## Security Checklist
 
 - [ ] All environment variables set in production
 - [ ] HTTPS enabled on domain
-- [ ] Supabase Auth email confirmation configured
-- [ ] RLS policies enabled on all tables
-- [ ] Database backups configured
+- [ ] Authentication email confirmation configured (if using provider with email verification)
+- [ ] Data backups/configured according to your provider
 - [ ] API rate limiting considered
 - [ ] CORS properly configured
 - [ ] Service role key never exposed
 - [ ] User inputs validated
-- [ ] Passwords hashed (automatic with Supabase)
+- [ ] Passwords hashed/managed by provider
 
 ## Monitoring & Maintenance
 
-### Supabase Monitoring
+### Provider Monitoring
 
-1. Go to Supabase dashboard
+1. Go to your provider's dashboard
 2. Check:
-   - Database health
+   - Service health
    - Auth logs
    - API usage
    - Storage usage
@@ -391,31 +391,33 @@ VITE_SUPABASE_ANON_KEY=your-prod-anon-key
 ### Application Monitoring
 
 Use:
+
 - Vercel Analytics
 - Sentry for error tracking
 - LogRocket for session replay
 
 ## Troubleshooting
 
-### Issue: "VITE_SUPABASE_URL is not defined"
+### Issue: "Provider environment variables not defined"
 
-**Solution:** Make sure `.env` file exists with correct variables
+**Solution:** Make sure `.env` file exists with correct provider variables
 
-### Issue: "Auth.users table not found"
+### Issue: "Auth backend not configured"
 
-**Solution:** Verify migrations are applied in Supabase SQL editor
+**Solution:** Verify your provider project is configured and any required schema/rules are applied
 
-### Issue: "RLS policy denies access"
+### Issue: "Access denied or policy error"
 
-**Solution:** Check policy conditions match your use case
+**Solution:** Check your provider's rules/policies match your use case
 
 ### Issue: "CORS error"
 
-**Solution:** Verify Supabase project URL matches in environment variables
+**Solution:** Verify the configured provider URL and allowed origins in your provider settings
 
 ### Issue: Build fails
 
 **Solution:**
+
 ```bash
 npm install
 npm run build
@@ -424,6 +426,7 @@ npm run build
 ### Issue: Dependencies conflicting
 
 **Solution:**
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
@@ -440,7 +443,7 @@ npm install
 
 ## Support Resources
 
-- [Supabase Docs](https://supabase.com/docs)
+- [React Docs](https://react.dev)
 - [React Docs](https://react.dev)
 - [Tailwind Docs](https://tailwindcss.com/docs)
 - [Vite Docs](https://vitejs.dev)
@@ -449,16 +452,19 @@ npm install
 ## Next Steps
 
 1. **Implement Real Features:**
+
    - Connect job listing to database
    - Build proposal system
    - Integrate payments
 
 2. **Add Advanced Features:**
+
    - Real-time chat
    - Video calls
    - AI job matching
 
 3. **Optimize:**
+
    - Add error tracking
    - Implement caching
    - Performance monitoring

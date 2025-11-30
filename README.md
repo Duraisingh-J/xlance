@@ -1,11 +1,11 @@
 # Xlance - Freelancing Platform for India
 
-A modern, production-ready freelancing platform built with React, Vite, Tailwind CSS, and Supabase. Designed to connect freelancers and clients in India with a focus on trust, quality, and secure payments.
+A modern, production-ready freelancing platform built with React, Vite, and Tailwind CSS. Database and storage responsibilities have been moved to a cloud-managed service (Firebase or similar).
 
 ## Features
 
 - **Modern UI/UX**: Glassmorphism design with smooth animations powered by Framer Motion
-- **Authentication**: Email/password signup and signin with Supabase Auth
+- **Authentication**: Email/password signup and signin (cloud-managed auth; Firebase planned)
 - **Dual Dashboards**: Separate dashboards for freelancers and clients
 - **Job Management**: Post jobs, browse opportunities, and submit proposals
 - **Secure Payments**: UPI-focused payment integration ready
@@ -19,8 +19,8 @@ A modern, production-ready freelancing platform built with React, Vite, Tailwind
 
 - **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS 3 with custom theme
-- **Database**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth
+- **Database**: Cloud-managed datastore (replaced Supabase in this repo)
+- **Authentication**: Cloud-managed auth (Firebase or chosen provider)
 - **Animations**: Framer Motion
 - **Icons**: Lucide React
 - **Routing**: React Router v7
@@ -70,7 +70,7 @@ src/
 ├── types/
 │   └── index.ts             # TypeScript type definitions
 ├── config/
-│   └── supabase.ts          # Supabase client setup
+│   └── provider.js          # Cloud provider client setup (e.g. Firebase)
 ├── App.tsx
 ├── main.tsx
 └── index.css
@@ -81,33 +81,33 @@ src/
 ### Prerequisites
 
 - Node.js 16+ and npm/yarn
-- Supabase account and project
+- A cloud provider account for auth/storage (Firebase or similar) if you plan to use hosted services
 
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd xlance
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 ```
 
-4. Add your Supabase credentials to `.env`:
-```
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+4. Add your cloud provider credentials to `.env` as instructed in `SETUP_GUIDE.md` (for example, Firebase keys).
 
 5. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -128,6 +128,7 @@ Visit `http://localhost:5173` in your browser.
 - **reviews**: User reviews and ratings
 
 All tables include:
+
 - Row Level Security (RLS) policies
 - Proper foreign key relationships
 - Indexed columns for performance
@@ -155,6 +156,7 @@ npm run lint
 ## Key Components
 
 ### Button
+
 Versatile button component with variants (primary, secondary, ghost, outline) and sizes (sm, md, lg).
 
 ```tsx
@@ -164,6 +166,7 @@ Versatile button component with variants (primary, secondary, ghost, outline) an
 ```
 
 ### Card
+
 Reusable card component with glass effect and solid options.
 
 ```tsx
@@ -173,6 +176,7 @@ Reusable card component with glass effect and solid options.
 ```
 
 ### Input
+
 Form input with validation and error handling.
 
 ```tsx
@@ -187,6 +191,7 @@ Form input with validation and error handling.
 ```
 
 ### AuthContext
+
 Global authentication state management.
 
 ```tsx
@@ -196,6 +201,7 @@ const { user, loading, signUp, signIn, signOut } = useAuth();
 ## Styling
 
 Custom Tailwind theme with:
+
 - Primary blue color palette (#5B7FFF)
 - Glass effect utilities
 - Smooth animations
@@ -205,14 +211,15 @@ Custom Tailwind theme with:
 ## API Integration
 
 The app is structured to easily integrate with:
+
 - Custom Edge Functions for complex operations
-- Supabase REST API for CRUD operations
+- Cloud-managed REST API / SDK for CRUD operations (configure provider)
 - Real-time subscriptions for live updates
 
 ## Security
 
 - Row Level Security (RLS) on all tables
-- Secure authentication with Supabase
+- Secure authentication via cloud-managed provider (Firebase or chosen provider)
 - Protected routes and dashboards
 - No sensitive data in localStorage
 - CORS headers properly configured
@@ -228,17 +235,20 @@ The app is structured to easily integrate with:
 ## Deployment
 
 ### Build for Production
+
 ```bash
 npm run build
 ```
 
 ### Deploy to Vercel
+
 ```bash
 npm i -g vercel
 vercel
 ```
 
 ### Deploy to Netlify
+
 1. Push code to GitHub
 2. Connect repository to Netlify
 3. Set environment variables
@@ -247,12 +257,15 @@ vercel
 ## Customization
 
 ### Theme Colors
+
 Edit `tailwind.config.js` to change the primary color palette.
 
 ### Services & Niches
+
 Update `src/utils/constants.ts` with your categories.
 
 ### Mock Data
+
 Modify `src/utils/mockData.ts` for testing without backend.
 
 ## Type Safety

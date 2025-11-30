@@ -7,17 +7,20 @@ import {
   HowItWorks,
   CTASection,
 } from '../components/home';
+import PageTransition from '../components/common/PageTransition';
 
 const HomePage = () => {
   return (
-    <main>
-      <HeroSection />
-      <ServicesSection />
-      <NichesSection />
-      <WhyChooseUs />
-      <HowItWorks />
-      <CTASection />
-    </main>
+    <PageTransition>
+      <main>
+        <HeroSection />
+        <ServicesSection />
+        <NichesSection />
+        <WhyChooseUs />
+        <HowItWorks />
+        <CTASection />
+      </main>
+    </PageTransition>
   );
 };
 

@@ -2,7 +2,8 @@ import React from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FreelancerDashboard, ClientDashboard } from '../components/dashboard';
-import { LoadingSpinner } from '../components/common';
+import LoadingSpinner from '../components/common/LoadingSpinner';
+import PageTransition from '../components/common/PageTransition';
 
 const DashboardPage = () => {
   const { role } = useParams();
@@ -25,11 +26,13 @@ const DashboardPage = () => {
   }
 
   return (
-    <main className="pt-20 pb-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
-        {role === 'freelancer' ? <FreelancerDashboard /> : <ClientDashboard />}
-      </div>
-    </main>
+    <PageTransition>
+      <main className="pt-20 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          {role === 'freelancer' ? <FreelancerDashboard /> : <ClientDashboard />}
+        </div>
+      </main>
+    </PageTransition>
   );
 };
 
