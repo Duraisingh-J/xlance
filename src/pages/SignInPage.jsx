@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -61,13 +60,8 @@ const SignInPage = () => {
 
   return (
     <PageTransition>
-      <div className="min-h-screen flex items-center justify-center px-4 pt-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
-        >
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
           <Card className="p-8">
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
@@ -123,8 +117,8 @@ const SignInPage = () => {
               </p>
             </div>
           </Card>
-        </motion.div>
-      </div>
+        </div>
+      </main>
     </PageTransition>
   );
 };

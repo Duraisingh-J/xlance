@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Google OAuth Redirect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <script>
+      // This page receives the id_token (JWT) from Google's OAuth2 implicit flow
+      // It extracts the email and name (if present) and posts a message to the opener window.
+      (function () {
+        function parseHash(hash) {
+          if (!hash) return {};
+          return hash
+            .replace(/^#/, '')
+            .split('&')
+            .map(function (p) { return p.split('='); })
+            .reduce(function (acc, cur) { acc[cur[0]] = decodeURIComponent(cur[1] || ''); return acc; }, {});
+        }
+
+        function parseJwt (token) {
+          try {
+            var parts = token.split('.');
+            if (parts.length !== 3) return null;
+            var payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            try { payload = atob(payload); } catch (e) { return null; }
+            return JSON.parse(payload);
+          } catch (e) { return null; }
+        }
+
+        var params = parseHash(window.location.hash || window.location.search);
+        var id_token = params.id_token || params.access_token || '';
+        var info = {};
+        if (id_token) {
+          var payload = parseJwt(id_token);
+          if (payload) {
+            info.email = payload.email || payload.upn || '';
+            info.name = payload.name || '';
+          }
+        }
+
+        // send to opener (if exists)
+        try {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage({ type: 'google_auth', data: info }, window.location.origin);
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        // close after a short delay
+        setTimeout(function () { window.close(); }, 800);
+      })();
+    </script>
+    <p>Completing sign-in...</p>
+  </body>
+</html>

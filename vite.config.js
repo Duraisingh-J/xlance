@@ -7,4 +7,7 @@ export default defineConfig({
   
     react(),
   ],
+  server: {
+    allowedHosts: ['forced-ludie-bailable.ngrok-free.dev', 'localhost'],
+  },
 })
