@@ -17,10 +17,10 @@ const CTASection = () => {
           Join thousands of freelancers and clients already working on Xlance. Find your next opportunity or perfect match today.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/auth/signup">
+          <Link to="/auth/signup" state={{ role: 'freelancer' }}>
             <Button size="lg">Join as Freelancer</Button>
           </Link>
-          <Link to="/auth/signup">
+          <Link to="/auth/signup" state={{ role: 'client' }}>
             <Button size="lg" variant="outline">
               Post Your First Job
             </Button>

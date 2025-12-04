@@ -84,10 +84,10 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Link to="/auth/signup">
+          <Link to="/auth/signup" state={{ role: 'freelancer' }}>
             <Button size="lg">Get Started as Freelancer</Button>
           </Link>
-          <Link to="/auth/signup">
+          <Link to="/auth/signup" state={{ role: 'client' }}>
             <Button size="lg" variant="outline">
               Post a Job
             </Button>

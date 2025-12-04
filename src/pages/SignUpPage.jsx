@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Briefcase, Users } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button, Card, Input } from '../components/common';
 import { validateEmail, validatePassword } from '../utils/helpers';
 import PageTransition from '../components/common/PageTransition';
 
 const SignUpPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-  const [role, setRole] = useState(null);
+
+  // initialRole comes from Link state (Home) or query param
+  const initialRole = location?.state?.role || new URLSearchParams(location.search).get('role') || null;
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -20,9 +27,6 @@ const SignUpPage = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -31,7 +35,6 @@ const SignUpPage = () => {
 
   const validateAccount = () => {
     const newErrors = {};
-    if (!role) newErrors.role = 'Please select a role';
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email';
     if (!validatePassword(formData.password)) newErrors.password = 'Password must be at least 8 characters';
@@ -45,11 +48,37 @@ const SignUpPage = () => {
     if (!validateAccount()) return;
     setIsLoading(true);
     try {
-      await signUp(formData.email, formData.password, formData.name, role);
-      if (role === 'freelancer') navigate('/profile/create');
-      else navigate('/dashboard');
+      await signUp(formData.email, formData.password, formData.name);
+      // send user to role onboarding; carry initialRole (if user clicked from Home)
+      navigate('/auth/select-role', { state: { role: initialRole } });
     } catch (err) {
       setErrors({ submit: err instanceof Error ? err.message : 'Sign up failed' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithGoogle();
+      // after social sign-in, go to role onboarding and pass initialRole if available
+      navigate('/auth/select-role', { state: { role: initialRole } });
+    } catch (err) {
+      setErrors({ submit: err instanceof Error ? err.message : 'Google Sign-up failed' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignup = async () => {
+    setIsLoading(true);
+    try {
+      await signInWithApple();
+      navigate('/auth/select-role', { state: { role: initialRole } });
+    } catch (err) {
+      setErrors({ submit: err instanceof Error ? err.message : 'Apple Sign-up failed' });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -57,11 +86,11 @@ const SignUpPage = () => {
   return (
     <PageTransition>
       <main className="min-h-screen flex items-center justify-center px-4 py-8 sm:py-12">
-        <div className="w-full max-w-2xl">
+        <div className="w-full max-w-md">
           <Card className="p-6 sm:p-8">
             <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Join Xlance</h1>
-              <p className="text-sm sm:text-base text-gray-600">Create your account and choose your role</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create your Account</h1>
+              <p className="text-sm sm:text-base text-gray-600">to join Xlance</p>
             </div>
 
             {errors.submit && (
@@ -69,6 +98,21 @@ const SignUpPage = () => {
                 {errors.submit}
               </div>
             )}
+
+            <div className="space-y-4">
+              <Button onClick={handleGoogleSignup} isLoading={isLoading} className="w-full" variant="outline">
+                Sign up with Google
+              </Button>
+              <Button onClick={handleAppleSignup} isLoading={isLoading} className="w-full" variant="outline">
+                Sign up with Apple
+              </Button>
+            </div>
+
+            <div className="my-6 flex items-center">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="mx-4 text-sm text-gray-500">Or with email</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>
 
             <form onSubmit={handleAccountSubmit} className="space-y-4 sm:space-y-5">
               <Input
@@ -91,61 +135,6 @@ const SignUpPage = () => {
                 onChange={handleChange}
                 error={errors.email}
               />
-
-              {/* Role Selection - Side by side on desktop, one by one on mobile */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Select Your Role</label>
-                {errors.role && (
-                  <div className="mb-3 p-2 bg-yellow-100 text-yellow-700 rounded text-sm">
-                    {errors.role}
-                  </div>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => setRole('freelancer')}
-                    type="button"
-                    className={`p-4 sm:p-5 border-2 rounded-lg transition-all text-left group ${
-                      role === 'freelancer'
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-500 hover:bg-primary-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-lg transition-colors flex-shrink-0 ${
-                        role === 'freelancer' ? 'bg-primary-200' : 'bg-primary-100 group-hover:bg-primary-200'
-                      }`}>
-                        <Briefcase size={20} className="text-primary-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 mb-0.5 text-sm">I'm a Freelancer</h3>
-                        <p className="text-xs text-gray-600">Turn your skills into unlimited income opportunities</p>
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setRole('client')}
-                    type="button"
-                    className={`p-4 sm:p-5 border-2 rounded-lg transition-all text-left group ${
-                      role === 'client'
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-200 hover:border-primary-500 hover:bg-primary-50'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-lg transition-colors flex-shrink-0 ${
-                        role === 'client' ? 'bg-primary-200' : 'bg-primary-100 group-hover:bg-primary-200'
-                      }`}>
-                        <Users size={20} className="text-primary-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 mb-0.5 text-sm">I'm a Client</h3>
-                        <p className="text-xs text-gray-600">Build amazing projects with expert freelancers worldwide</p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
 
               <Input
                 label="Password"
