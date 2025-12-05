@@ -1,65 +1,80 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Briefcase, DollarSign, Star, TrendingUp } from 'lucide-react';
-import { Card } from '../common';
+import { Card, Button } from '../common';
+import { MessageCircle, Bell } from 'lucide-react';
+import PageTransition from '../common/PageTransition';
+import { useAuth } from '../../context/AuthContext';
 
 const FreelancerDashboard = () => {
-  const stats = [
-    { label: 'Active Projects', value: '3', icon: Briefcase, color: 'text-blue-600' },
-    { label: 'Total Earnings', value: '₹45,230', icon: DollarSign, color: 'text-green-600' },
-    { label: 'Rating', value: '4.8/5', icon: Star, color: 'text-yellow-600' },
-    { label: 'Profile Views', value: '234', icon: TrendingUp, color: 'text-purple-600' },
-  ];
+  const { userProfile } = useAuth();
+  const name = userProfile?.name || 'Priya';
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back, Freelancer</h1>
-        <p className="text-gray-600">Here's your performance overview</p>
-      </div>
+    <PageTransition>
+      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <header className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-sm text-gray-600 mt-1">Welcome back, {name}! Here's an overview of your activity.</p>
+          </header>
 
-      <div className="grid md:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className="p-6 text-center">
-              <div className={`flex justify-center mb-4 ${stat.color}`}>
-                <stat.icon size={32} />
-              </div>
-              <h3 className="text-gray-600 text-sm font-medium mb-1">{stat.label}</h3>
-              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="p-6">
+              <h3 className="text-sm text-gray-500">Total Earnings</h3>
+              <p className="text-3xl font-bold text-gray-900 mt-3">₹8,50,230</p>
             </Card>
-          </motion.div>
-        ))}
-      </div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card className="p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Jobs</h2>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-start justify-between pb-4 border-b border-gray-200 last:border-b-0">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Web Development Project</h3>
-                  <p className="text-sm text-gray-600">Posted 2 days ago</p>
-                </div>
-                <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                  In Progress
-                </span>
+            <Card className="p-6">
+              <h3 className="text-sm text-gray-500">Active Projects</h3>
+              <p className="text-3xl font-bold text-gray-900 mt-3">5</p>
+            </Card>
+
+            <Card className="p-6 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm text-gray-500">Profile Status</h3>
+                <p className="text-green-600 font-semibold text-lg mt-2">100% Complete</p>
               </div>
-            ))}
+            </Card>
           </div>
-        </Card>
-      </motion.div>
-    </div>
+
+          {/* Messages and Notifications removed per request */}
+
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold mb-4">Job Recommendations</h2>
+            <div className="space-y-4">
+              <div className="p-4 border rounded-md flex items-center justify-between">
+                <div>
+                  <a className="text-primary-600 font-medium">Senior React Developer for Fintech App</a>
+                  <p className="text-sm text-gray-600">A fast-growing fintech startup is looking for an experienced React developer to build their next-gen platform.</p>
+                  <div className="flex gap-2 mt-2 text-xs text-gray-500">
+                    <span className="px-2 py-1 bg-gray-100 rounded">React</span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">Fintech</span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">Remote</span>
+                  </div>
+                </div>
+                <div>
+                  <Button className="ml-4">View Details</Button>
+                </div>
+              </div>
+
+              <div className="p-4 border rounded-md flex items-center justify-between">
+                <div>
+                  <a className="text-primary-600 font-medium">Graphic Designer for Social Media Content</a>
+                  <p className="text-sm text-gray-600">Marketing agency needs a creative graphic designer to create engaging visuals for various social media platforms.</p>
+                  <div className="flex gap-2 mt-2 text-xs text-gray-500">
+                    <span className="px-2 py-1 bg-gray-100 rounded">Adobe Suite</span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">Social Media</span>
+                    <span className="px-2 py-1 bg-gray-100 rounded">Part-time</span>
+                  </div>
+                </div>
+                <div>
+                  <Button className="ml-4">View Details</Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </main>
+    </PageTransition>
   );
 };
 

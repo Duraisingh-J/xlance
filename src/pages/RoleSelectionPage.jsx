@@ -1,39 +1,76 @@
-
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { updateUserProfile } from '../services/user_services';
-import { Button } from '../components/common';
+// src/pages/RoleSelectionPage.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { updateUserProfile } from "../services/user_services";
+import { Button } from "../components/common";
 
 const RoleSelectionPage = () => {
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { user } = useAuth();
+  const [error, setError] = useState("");
+  const { user, loading: authLoading, userProfile } = useAuth();
   const navigate = useNavigate();
 
-  const handleRoleSelection = async (selectedRole) => {
+  // If not logged in, send to sign in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth/signin", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  // If onboarding already done, skip this page
+  useEffect(() => {
+    if (userProfile && userProfile.onboardingCompleted) {
+      const roles = userProfile.role || [];
+      if (roles.includes("freelancer") && !roles.includes("client")) {
+        navigate("/freelancer/dashboard", { replace: true });
+      } else if (roles.includes("client") && !roles.includes("freelancer")) {
+        navigate("/client/dashboard", { replace: true });
+      } else if (roles.includes("client") && roles.includes("freelancer")) {
+        navigate("/freelancer/dashboard", { replace: true });
+      }
+    }
+  }, [userProfile, navigate]);
+
+  const handleRoleSelection = (selectedRole) => {
     setRole(selectedRole);
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async () => {
     if (!role) {
-      setError('Please select a role to continue.');
+      setError("Please select a role to continue.");
       return;
     }
+    if (!user) {
+      setError("You must be signed in to continue.");
+      return;
+    }
+
     setLoading(true);
     try {
-      await updateUserProfile(user.uid, { role });
-      // Redirect based on role or to a profile creation page
-      navigate(`/profile/create`);
+      const rolesArr = role === "both" ? ["client", "freelancer"] : [role];
+      await updateUserProfile(user.uid, {
+        role: rolesArr,
+        onboardingCompleted: true,
+      });
+      navigate("/profile/create");
     } catch (err) {
-      setError('Failed to update role. Please try again.');
       console.error(err);
+      setError("Failed to update role. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center">
@@ -49,20 +86,20 @@ const RoleSelectionPage = () => {
           <RoleCard
             title="I'm a Client"
             description="I want to hire freelancers for my projects."
-            isSelected={role === 'client'}
-            onSelect={() => handleRoleSelection('client')}
+            isSelected={role === "client"}
+            onSelect={() => handleRoleSelection("client")}
           />
           <RoleCard
             title="I'm a Freelancer"
             description="I'm looking for work and want to offer my services."
-            isSelected={role === 'freelancer'}
-            onSelect={() => handleRoleSelection('freelancer')}
+            isSelected={role === "freelancer"}
+            onSelect={() => handleRoleSelection("freelancer")}
           />
-           <RoleCard
+          <RoleCard
             title="I'm Both"
             description="I want to hire and also offer my services."
-            isSelected={role === 'both'}
-            onSelect={() => handleRoleSelection('both')}
+            isSelected={role === "both"}
+            onSelect={() => handleRoleSelection("both")}
           />
         </div>
 
@@ -74,7 +111,7 @@ const RoleSelectionPage = () => {
             disabled={!role || loading}
             className="w-full"
           >
-            {loading ? 'Continuing...' : 'Continue'}
+            {loading ? "Continuing..." : "Continue"}
           </Button>
         </div>
       </div>
@@ -87,8 +124,8 @@ const RoleCard = ({ title, description, isSelected, onSelect }) => (
     onClick={onSelect}
     className={`p-6 border rounded-lg cursor-pointer transition-all duration-200 ${
       isSelected
-        ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500'
-        : 'border-gray-300 hover:border-gray-400'
+        ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500"
+        : "border-gray-300 hover:border-gray-400"
     }`}
   >
     <h3 className="text-lg font-bold text-gray-900">{title}</h3>

@@ -1,94 +1,139 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { Navbar, Footer, ScrollToTop, LoadingScreen } from './components/common';
-import HomePage from './pages/HomePage';
-import SignUpPage from './pages/SignUpPage';
-import SignInPage from './pages/SignInPage';
-import DashboardPage from './pages/DashboardPage';
-import CreateProfilePage from './pages/CreateProfilePage';
-import RoleSelectionPage from './pages/RoleSelectionPage';
+// src/App.jsx
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { Navbar, Footer, ScrollToTop, LoadingScreen } from "./components/common";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-const ProtectedRoute = () => {
-  const { user } = useAuth();
-  if (!user) {
-    return <Navigate to="/auth/signin" replace />;
-  }
-  return <Outlet />;
-};
+import HomePage from "./pages/HomePage";
+import SignUpPage from "./pages/SignUpPage";
+import SignInPage from "./pages/SignInPage";
+import Onboarding from "./pages/Onboarding";
+import DashboardPage from "./pages/DashboardPage";
+import MyProjects from "./pages/MyProjects";
+import CreateProfilePage from "./pages/CreateProfilePage";
+import RoleSelectionPage from "./pages/RoleSelectionPage";
 
-const RoleHandler = () => {
+// Auto-redirect user based on role after onboarding
+function DashboardRedirect() {
   const { userProfile, loading } = useAuth();
 
-  if (loading) {
-    return <LoadingScreen />;
+  if (loading) return <LoadingScreen />;
+
+  const role = userProfile?.role;
+  if (!role || role.length === 0) {
+    return <Navigate to="/onboarding" replace />;
   }
 
-  if (userProfile && !userProfile.role) {
-    return <Navigate to="/auth/select-role" replace />;
-  }
-
-  return <Outlet />;
+  const firstRole = Array.isArray(role) ? role[0] : role;
+  return <Navigate to={`/dashboard/${firstRole}`} replace />;
 }
-
-const HomeWrapper = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
-  // If the user is logged in, RoleHandler will decide where to send them.
-  // If not logged in, they see the public homepage.
-  return user ? <RoleHandler /> : <HomePage />;
-}
-
 
 function AppLayout() {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/auth/signin' || location.pathname === '/auth/signup' || location.pathname === '/auth/select-role';
+  const isAuthPage = [
+    "/auth/signin",
+    "/auth/signup",
+    "/auth/select-role",
+    "/onboarding",
+  ].includes(location.pathname);
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <ScrollToTop />
       {!isAuthPage && <Navbar />}
-      <Routes>
-        <Route path="/" element={<HomeWrapper />}>
-          {/* Nested route for dashboard access after role is confirmed */}
-          <Route path="" element={<DashboardRedirect />} />
-        </Route>
-        
+
+      <main className="flex-1">
+        <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<HomePage />} />
         <Route path="/auth/signup" element={<SignUpPage />} />
         <Route path="/auth/signin" element={<SignInPage />} />
 
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/auth/select-role" element={<RoleSelectionPage />} />
-          <Route path="/profile/create" element={<CreateProfilePage />} />
-          <Route path="/dashboard/:role" element={<DashboardPage />} />
-        </Route>
+        {/* Onboarding Route (logged-in but not yet onboarded) */}
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute requireOnboarded={false}>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Add a catch-all or a 404 page if desired */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+        {/* Protected Routes */}
+        <Route
+          path="/auth/select-role"
+          element={
+            <ProtectedRoute requireOnboarded={false}>
+              <RoleSelectionPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/profile/create"
+          element={
+            <ProtectedRoute>
+              <CreateProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/:role"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <MyProjects />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Auto redirect based on role */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardRedirect />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Convenience redirects */}
+        <Route
+          path="/client/dashboard"
+          element={<Navigate to="/dashboard/client" replace />}
+        />
+        <Route
+          path="/freelancer/dashboard"
+          element={<Navigate to="/dashboard/freelancer" replace />}
+        />
+
+        {/* Catch-all → go home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+
       {!isAuthPage && <Footer />}
-    </>
+    </div>
   );
 }
 
-const DashboardRedirect = () => {
-  const { userProfile } = useAuth();
-  // This component is only reached if the user is logged in and has a role.
-  // It reads the role from the profile and redirects to the specific dashboard.
-  if (userProfile?.role) {
-    return <Navigate to={`/dashboard/${userProfile.role}`} replace />;
-  }
-  // Fallback while profile is loading or if role is somehow still null
-  return <LoadingScreen />;
-}
-
-
-function App() {
+export default function App() {
   return (
     <Router>
       <AuthProvider>
@@ -97,5 +142,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;

@@ -1,86 +1,147 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, User } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Button, Card, Input } from '../components/common';
-import { validateEmail, validatePassword } from '../utils/helpers';
-import PageTransition from '../components/common/PageTransition';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Mail, Lock, User } from "lucide-react";
+import GoogleIcon from "../assets/google-color-svgrepo-com.svg";
+import AppleIcon from "../assets/apple-173-svgrepo-com.svg";
+import { useAuth } from "../context/AuthContext";
+import { Button, Card, Input } from "../components/common";
+import { validateEmail, validatePassword } from "../utils/helpers";
+import PageTransition from "../components/common/PageTransition";
 
 const SignUpPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
+
+  // We *only* use these from auth:
+  const { signUp, signInWithGoogle, signInWithGoogleRedirect, signInWithApple, loginAsMock } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-  // initialRole comes from Link state (Home) or query param
-  const initialRole = location?.state?.role || new URLSearchParams(location.search).get('role') || null;
+  // optional: initialRole if you pass it from Home
+  const initialRole =
+    location?.state?.role ||
+    new URLSearchParams(location.search).get("role") ||
+    null;
 
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Separate loading states so social buttons don’t affect email submit
+  const [isLoadingSocial, setIsLoadingSocial] = useState(false);
+  const [isLoadingEmail, setIsLoadingEmail] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateAccount = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
-    if (!validateEmail(formData.email)) newErrors.email = 'Please enter a valid email';
-    if (!validatePassword(formData.password)) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!validateEmail(formData.email))
+      newErrors.email = "Please enter a valid email";
+    if (!validatePassword(formData.password))
+      newErrors.password = "Password must be at least 8 characters";
+    if (formData.password !== formData.confirmPassword)
+      newErrors.confirmPassword = "Passwords do not match";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // EMAIL SIGNUP
   const handleAccountSubmit = async (e) => {
     e.preventDefault();
     if (!validateAccount()) return;
-    setIsLoading(true);
+    setIsLoadingEmail(true);
+    setErrors({});
     try {
       await signUp(formData.email, formData.password, formData.name);
-      // send user to role onboarding; carry initialRole (if user clicked from Home)
-      navigate('/auth/select-role', { state: { role: initialRole } });
+      // After email signup, always go to onboarding
+      navigate("/onboarding", { replace: true, state: { role: initialRole } });
     } catch (err) {
-      setErrors({ submit: err instanceof Error ? err.message : 'Sign up failed' });
+      setErrors({
+        submit: err instanceof Error ? err.message : "Sign up failed",
+      });
     } finally {
-      setIsLoading(false);
+      setIsLoadingEmail(false);
     }
   };
 
+  // GOOGLE SIGNUP
   const handleGoogleSignup = async () => {
-    setIsLoading(true);
+    setIsLoadingSocial(true);
+    setErrors({});
     try {
       await signInWithGoogle();
-      // after social sign-in, go to role onboarding and pass initialRole if available
-      navigate('/auth/select-role', { state: { role: initialRole } });
+      // After Google signup, always go to onboarding
+      navigate("/onboarding", { replace: true, state: { role: initialRole } });
     } catch (err) {
-      setErrors({ submit: err instanceof Error ? err.message : 'Google Sign-up failed' });
+        // If popup is blocked (including COOP/COEP window.closed blocking), fall back to redirect flow
+        const code = err && err.code ? String(err.code).toLowerCase() : '';
+        const msg = err && err.message ? String(err.message).toLowerCase() : '';
+        const shouldRedirectFallback = [
+          'popup',
+          'blocked',
+          'cross-origin-opener-policy',
+          'window.closed',
+          'opener',
+          'failed to get document',
+        ].some((s) => code.includes(s) || msg.includes(s));
+
+        if (shouldRedirectFallback) {
+          try {
+            // eslint-disable-next-line no-alert
+            alert('Popup unavailable due to browser policy — redirecting to Google sign-in.');
+            await signInWithGoogleRedirect();
+            // redirect flow will navigate away; on return, AuthContext handles profile creation and routing
+          } catch (redirErr) {
+            setErrors({ submit: redirErr instanceof Error ? redirErr.message : 'Google redirect failed' });
+          }
+        } else {
+          setErrors({ submit: err instanceof Error ? err.message : 'Google sign-up failed' });
+        }
     } finally {
-      setIsLoading(false);
+      setIsLoadingSocial(false);
     }
   };
 
+  // APPLE SIGNUP
   const handleAppleSignup = async () => {
-    setIsLoading(true);
+    setIsLoadingSocial(true);
+    setErrors({});
     try {
       await signInWithApple();
-      navigate('/auth/select-role', { state: { role: initialRole } });
+      // After Apple signup, always go to onboarding
+      navigate("/onboarding", { replace: true, state: { role: initialRole } });
     } catch (err) {
-      setErrors({ submit: err instanceof Error ? err.message : 'Apple Sign-up failed' });
+      setErrors({
+        submit:
+          err instanceof Error ? err.message : "Apple sign-up failed",
+      });
     } finally {
-      setIsLoading(false);
+      setIsLoadingSocial(false);
     }
+  };
+
+  // Development: quick mock account to skip real OAuth during local testing
+  const handleMockAccount = async () => {
+    const mockProfile = {
+      uid: 'mock-uid',
+      name: 'Priya',
+      email: 'priya@example.com',
+      role: [],
+      onboardingCompleted: false,
+    };
+    loginAsMock(mockProfile);
+    navigate('/onboarding', { replace: true, state: { role: initialRole } });
   };
 
   return (
@@ -89,8 +150,12 @@ const SignUpPage = () => {
         <div className="w-full max-w-md">
           <Card className="p-6 sm:p-8">
             <div className="text-center mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Create your Account</h1>
-              <p className="text-sm sm:text-base text-gray-600">to join Xlance</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+                Create your Account
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600">
+                to join Xlance
+              </p>
             </div>
 
             {errors.submit && (
@@ -99,13 +164,32 @@ const SignUpPage = () => {
               </div>
             )}
 
+            {/* SOCIAL BUTTONS */}
             <div className="space-y-4">
-              <Button onClick={handleGoogleSignup} isLoading={isLoading} className="w-full" variant="outline">
-                Sign up with Google
+              <Button
+                onClick={handleGoogleSignup}
+                isLoading={isLoadingSocial}
+                className="w-full flex items-center justify-center gap-3"
+                variant="outline"
+              >
+                <img src={GoogleIcon} alt="Google" className="w-5 h-5" />
+                <span>Sign up with Google</span>
               </Button>
-              <Button onClick={handleAppleSignup} isLoading={isLoading} className="w-full" variant="outline">
-                Sign up with Apple
+
+              <Button
+                onClick={handleAppleSignup}
+                isLoading={isLoadingSocial}
+                className="w-full flex items-center justify-center gap-3"
+                variant="outline"
+              >
+                <img src={AppleIcon} alt="Apple" className="w-5 h-5" />
+                <span>Sign up with Apple</span>
               </Button>
+            </div>
+
+            {/* Dev helper: mock account */}
+            <div className="mt-4">
+              <Button onClick={handleMockAccount} variant="ghost" className="w-full">Continue with Mock Account (dev)</Button>
             </div>
 
             <div className="my-6 flex items-center">
@@ -114,7 +198,11 @@ const SignUpPage = () => {
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
-            <form onSubmit={handleAccountSubmit} className="space-y-4 sm:space-y-5">
+            {/* EMAIL FORM */}
+            <form
+              onSubmit={handleAccountSubmit}
+              className="space-y-4 sm:space-y-5"
+            >
               <Input
                 label="Full Name"
                 name="name"
@@ -158,13 +246,20 @@ const SignUpPage = () => {
                 error={errors.confirmPassword}
               />
 
-              <Button type="submit" isLoading={isLoading} className="w-full mt-6 sm:mt-7">
+              <Button
+                type="submit"
+                isLoading={isLoadingEmail}
+                className="w-full mt-6 sm:mt-7"
+              >
                 Create Account
               </Button>
 
               <div className="text-sm text-gray-600 text-center pt-2">
-                Already have an account?{' '}
-                <Link to="/auth/signin" className="text-primary-600 hover:text-primary-700 font-medium">
+                Already have an account?{" "}
+                <Link
+                  to="/auth/signin"
+                  className="text-primary-600 hover:text-primary-700 font-medium"
+                >
                   Sign In
                 </Link>
               </div>

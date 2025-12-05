@@ -14,7 +14,7 @@ const SignInPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, refreshUserProfile } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -50,9 +50,24 @@ const SignInPage = () => {
     setIsLoading(true);
     try {
       await signIn(formData.email, formData.password);
-      navigate('/dashboard/freelancer');
-    } catch {
-      setErrors({ submit: 'Invalid email or password' });
+      // Attempt to refresh profile and navigate to the user's dashboard if available.
+      let profile = null;
+      try {
+        profile = await refreshUserProfile();
+      } catch (e) {
+        // ignore
+      }
+
+      const roleField = profile?.role;
+      const roleSegment = Array.isArray(roleField) ? roleField[0] : roleField;
+      if (roleSegment) {
+        navigate(`/dashboard/${roleSegment}`, { replace: true });
+      } else {
+        // Default to freelancer dashboard if no role found
+        navigate('/dashboard/freelancer', { replace: true });
+      }
+    } catch (err) {
+      setErrors({ submit: err?.message || 'Invalid email or password' });
     } finally {
       setIsLoading(false);
     }

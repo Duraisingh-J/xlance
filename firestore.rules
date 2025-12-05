@@ -1,18 +1,237 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------- Helper functions ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function getUser(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    // roles is stored as an array: ["client"], ["freelancer"], or both
+    function hasRole(role) {
+      return isSignedIn()
+        && role in getUser(request.auth.uid).data.role;
+    }
+
+    // Basic type/field validation helpers
+    function isString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    function isOptionalString(field) {
+      // allow null or string
+      return !(field is string) || field.size() >= 0;
+    }
+
+    function isTimestamp(field) {
+      return field is timestamp;
+    }
+
+    // ---------- users collection ----------
+    // Document shape suggestion:
+    // users/{uid} = {
+    //   name: string,
+    //   email: string,
+    //   photoURL: string|null,
+    //   role: list<string>,      // ["client"], ["freelancer"], or both
+    //   onboardingCompleted: bool,
+    //   createdAt: timestamp,
+    //   updatedAt: timestamp,
+    //   ...other profile fields...
+    // }
+    match /users/{uid} {
+
+      // Public read: you can change to stricter (only self) if you prefer
+      allow read: if true;
+
+      // Create: must be the authenticated user creating their own doc
+      allow create: if isUser(uid)
+        && !exists(resourcePath)
+        && isString(request.resource.data.name)
+        && isString(request.resource.data.email)
+        && request.resource.data.role is list
+        && request.resource.data.onboardingCompleted is bool
+        && isTimestamp(request.resource.data.createdAt)
+        && isTimestamp(request.resource.data.updatedAt);
+
+      // Update: user can update their own profile, but cannot impersonate others
+      allow update: if isUser(uid)
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.role is list
+        && request.resource.data.onboardingCompleted is bool
+        && isTimestamp(request.resource.data.updatedAt);
+
+      // Delete: user can delete their own profile (optional – you can disable)
+      allow delete: if isUser(uid);
+    }
+
+    // ---------- jobs collection ----------
+    // jobs/{jobId} = {
+    //   clientId: string (uid),
+    //   title: string,
+    //   description: string,
+    //   budget: number,
+    //   status: "open" | "in_progress" | "completed" | ...,
+    //   createdAt: timestamp,
+    //   updatedAt: timestamp,
+    //   ...other public fields...
+    // }
+    match /jobs/{jobId} {
+
+      // Everyone can list and read jobs
+      allow read: if true;
+
+      // Only signed-in clients can create jobs
+      allow create: if hasRole("client")
+        && request.resource.data.clientId == request.auth.uid
+        && isString(request.resource.data.title)
+        && isString(request.resource.data.description)
+        && request.resource.data.budget is number
+        && isTimestamp(request.resource.data.createdAt)
+        && isTimestamp(request.resource.data.updatedAt);
+
+      // Update: only the job owner (client) can modify it
+      allow update: if isSignedIn()
+        && resource.data.clientId == request.auth.uid
+        && request.resource.data.clientId == resource.data.clientId
+        && isTimestamp(request.resource.data.updatedAt);
+
+      // Delete: only owner can delete
+      allow delete: if isSignedIn()
+        && resource.data.clientId == request.auth.uid;
+    }
+
+    // ---------- proposals subcollection ----------
+    // jobs/{jobId}/proposals/{proposalId} = {
+    //   freelancerId: string (uid),
+    //   clientId: string (resource.parent().data.clientId),
+    //   coverLetter: string,
+    //   bidAmount: number,
+    //   status: "pending" | "accepted" | "rejected",
+    //   createdAt: timestamp,
+    //   updatedAt: timestamp,
+    // }
+    match /jobs/{jobId}/proposals/{proposalId} {
+
+      // Read: client (job owner) or freelancer who created that proposal
+      allow read: if isSignedIn() && (
+        resource.data.freelancerId == request.auth.uid ||
+        get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid
+      );
+
+      // Create: only freelancers; must propose as themselves
+      allow create: if hasRole("freelancer")
+        && request.resource.data.freelancerId == request.auth.uid
+        && request.resource.data.clientId ==
+           get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId
+        && isString(request.resource.data.coverLetter)
+        && request.resource.data.bidAmount is number
+        && isTimestamp(request.resource.data.createdAt)
+        && isTimestamp(request.resource.data.updatedAt);
+
+      // Update:
+      // - freelancer can edit their proposal (e.g., cover letter) while pending
+      // - client can update status field to accept/reject
+      allow update: if isSignedIn() && (
+        // freelancer editing their own proposal
+        (resource.data.freelancerId == request.auth.uid &&
+         request.resource.data.freelancerId == resource.data.freelancerId &&
+         request.resource.data.clientId == resource.data.clientId) ||
+
+        // client updating status only
+        (
+          get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(["status", "updatedAt"])
+        )
+      );
+
+      // Delete: freelancer may withdraw proposal before accepted
+      allow delete: if isSignedIn()
+        && resource.data.freelancerId == request.auth.uid
+        && resource.data.status == "pending";
+    }
+
+    // ---------- chats collection ----------
+    // chats/{chatId} = {
+    //   participants: [uid1, uid2, ...],
+    //   jobId: string|null,
+    //   createdAt: timestamp
+    // }
+    match /chats/{chatId} {
+      function isParticipant() {
+        return isSignedIn()
+          && request.auth.uid in resource.data.participants;
+      }
+
+      allow read: if isParticipant();
+      allow create: if isSignedIn()
+        && request.resource.data.participants is list
+        && request.auth.uid in request.resource.data.participants
+        && isTimestamp(request.resource.data.createdAt);
+      allow update, delete: if isParticipant();
+    }
+
+    // chats/{chatId}/messages/{messageId} = {
+    //   senderId: string,
+    //   text: string,
+    //   createdAt: timestamp
+    // }
+    match /chats/{chatId}/messages/{messageId} {
+      function isParticipantInChat() {
+        return isSignedIn()
+          && request.auth.uid in
+             get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+
+      allow read: if isParticipantInChat();
+
+      allow create: if isParticipantInChat()
+        && request.resource.data.senderId == request.auth.uid
+        && isString(request.resource.data.text)
+        && isTimestamp(request.resource.data.createdAt);
+
+      allow update, delete: if false; // messages immutable (safer)
+    }
+
+    // ---------- reviews collection ----------
+    // reviews/{reviewId} = {
+    //   fromUserId: string,
+    //   toUserId: string,
+    //   jobId: string,
+    //   rating: number (1-5),
+    //   comment: string,
+    //   createdAt: timestamp
+    // }
+    match /reviews/{reviewId} {
+      allow read: if true;
+
+      // Only authenticated users can leave reviews
+      // Here we don't enforce completed contracts; you can add that with a flag later.
+      allow create: if isSignedIn()
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && isString(request.resource.data.comment)
+        && isTimestamp(request.resource.data.createdAt);
+
+      // No updates or deletes to avoid abuse (or restrict to author only if you prefer)
+      allow update, delete: if false;
+    }
+
+    // ---------- default deny ----------
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 1, 3);
+      allow read, write: if false;
     }
   }
 }
