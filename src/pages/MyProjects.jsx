@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import PageTransition from '../components/common/PageTransition';
 import { Card, Button } from '../components/common';
-import { Briefcase, AlertTriangle, Pause, Award, Feather } from 'lucide-react';
+import { Briefcase, AlertTriangle, Pause, Award, Feather, HandshakeIcon, Trophy, PenLine } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const sampleProjects = [
@@ -11,8 +11,8 @@ const sampleProjects = [
     client: 'FinEdge Solutions',
     status: 'Active',
     budget: '₹45,000',
-    date: '2 days ago',
-    deadline: '2025-12-15',
+    acceptancedate: '10-12-2024',
+    deadline: '01-01-2025',
   },
   {
     id: 'p2',
@@ -20,8 +20,8 @@ const sampleProjects = [
     client: 'ShopKart',
     status: 'Completed',
     budget: '₹1,25,000',
-    date: '3 weeks ago',
-    deadline: '2025-10-01',
+    acceptancedate: '10-12-2024',
+    deadline: '01-01-2025',
   },
   {
     id: 'p3',
@@ -29,8 +29,8 @@ const sampleProjects = [
     client: 'GrowSocial Agency',
     status: 'Draft',
     budget: '₹12,000',
-    date: '1 month ago',
-    deadline: '2026-01-10',
+    acceptancedate: '10-12-2024',
+    deadline: '01-01-2025'
   },
 ];
 
@@ -92,7 +92,7 @@ const MyProjects = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900">{p.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{p.client}</p>
+                          <p className="text-sm text-gray-600 mt-1">Client : {p.client}</p>
                         </div>
 
                         <div className="flex flex-col items-end">
@@ -100,15 +100,24 @@ const MyProjects = () => {
                           <div className="text-lg font-semibold text-gray-900 mt-3">{p.budget}</div>
                         </div>
                       </div>
-
+                        
                       <div className="mt-4 flex items-center gap-4">
+                        {p.deadline && (
+                          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-md text-sm">
+                            <HandshakeIcon size={14} />
+                            <span>Handshaken : {p.acceptancedate}</span>
+                          </div>
+                        )}
                         {p.deadline && (
                           <div className="inline-flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-md text-sm">
                             <AlertTriangle size={14} />
                             <span>Deadline: {p.deadline}</span>
                           </div>
                         )}
-
+                        </div>
+                        
+                        <div className="mt-4 flex items-center gap-4">
+                        
                         <a className="text-sm text-primary-600 font-medium">View Details</a>
                       </div>
                     </div>
@@ -129,7 +138,7 @@ function StatusPill({ status }) {
   if (status === 'Active') {
     return (
       <div className={`${base} bg-green-100 text-green-700`}>
-        <Pause size={14} />
+        <Play size={14} />
         <span>Active</span>
       </div>
     );
@@ -138,7 +147,7 @@ function StatusPill({ status }) {
   if (status === 'Completed') {
     return (
       <div className={`${base} bg-gray-100 text-gray-700`}>
-        <Award size={14} />
+        <Trophy size={14} />
         <span>Completed</span>
       </div>
     );
@@ -147,7 +156,7 @@ function StatusPill({ status }) {
   // Draft
   return (
     <div className={`${base} bg-yellow-100 text-yellow-700`}>
-      <Feather size={14} />
+      <PenLine size={14} />
       <span>Draft</span>
     </div>
   );

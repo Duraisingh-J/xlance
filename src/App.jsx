@@ -17,6 +17,7 @@ import SignInPage from "./pages/SignInPage";
 import Onboarding from "./pages/Onboarding";
 import DashboardPage from "./pages/DashboardPage";
 import MyProjects from "./pages/MyProjects";
+import Messages from "./pages/Messages";
 import CreateProfilePage from "./pages/CreateProfilePage";
 import RoleSelectionPage from "./pages/RoleSelectionPage";
 
@@ -99,6 +100,15 @@ function AppLayout() {
           element={
             <ProtectedRoute>
               <MyProjects />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <Messages />
             </ProtectedRoute>
           }
         />

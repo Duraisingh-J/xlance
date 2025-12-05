@@ -29,6 +29,7 @@ const Navbar = () => {
     const isActive = matches || (!activeFound && to === dashboardPath);
     return isActive ? `${base} ${active}` : base;
   };
+  const homeLinkClass = 'text-primary-600 hover:text-primary-700 transition-colors';
 
   const handleSignOut = async () => {
     await signOut();
@@ -50,10 +51,10 @@ const Navbar = () => {
             {isHome ? (
               // Render original simple home navbar
               <>
-                <Link to="/" className={getLinkClass('/')}>Home</Link>
+                <Link to="/" className={homeLinkClass}>Home</Link>
                 {user ? (
                   <>
-                    <Link to={dashboardPath} className={getLinkClass(dashboardPath)}>Dashboard</Link>
+                    <Link to={dashboardPath} className={homeLinkClass}>Dashboard</Link>
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-700">{userProfile?.name || user?.displayName || user?.email}</span>
                       <button onClick={handleSignOut} className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Sign out">
@@ -112,11 +113,11 @@ const Navbar = () => {
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-        {isOpen && (
+            {isOpen && (
           <div className="md:hidden mt-2 bg-white/30 backdrop-blur-2xl rounded-xl border border-white/30 p-4 space-y-3 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
             {/* Mobile menu: ordered links */}
             {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
-              <Link to="/" className={getLinkClass('/') + ' block py-2'}>Home</Link>
+              <Link to="/" className={(isHome ? homeLinkClass : getLinkClass('/')) + ' block py-2'}>Home</Link>
             )}
             {user ? (
               <>
