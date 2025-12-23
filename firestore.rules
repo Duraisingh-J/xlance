@@ -68,6 +68,7 @@ service cloud.firestore {
         && request.resource.data.email == resource.data.email
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.role is list
+        && request.resource.data.role == resource.data.role
         && request.resource.data.onboardingCompleted is bool
         && isTimestamp(request.resource.data.updatedAt);
 
@@ -213,7 +214,7 @@ service cloud.firestore {
     //   createdAt: timestamp
     // }
     match /reviews/{reviewId} {
-      allow read: if true;
+      allow read: if true && !( "email" in resource.data );
 
       // Only authenticated users can leave reviews
       // Here we don't enforce completed contracts; you can add that with a flag later.

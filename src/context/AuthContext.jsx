@@ -91,23 +91,23 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Development helper: login as a mock user (bypasses Firebase)
-  const loginAsMock = (mockProfile = {}) => {
-    const mockUser = { uid: mockProfile.uid || 'mock-uid', email: mockProfile.email || 'mock@example.com' };
-    setUser(mockUser);
-    setUserProfile({
-      uid: mockUser.uid,
-      name: mockProfile.name || 'Mock User',
-      email: mockProfile.email || mockUser.email,
-      role: mockProfile.role || [],
-      onboardingCompleted: !!mockProfile.onboardingCompleted,
-      ...mockProfile,
-    });
-    setLoading(false);
-  };
+  // const loginAsMock = (mockProfile = {}) => {
+  //   const mockUser = { uid: mockProfile.uid || 'mock-uid', email: mockProfile.email || 'mock@example.com' };
+  //   setUser(mockUser);
+  //   setUserProfile({
+  //     uid: mockUser.uid,
+  //     name: mockProfile.name || 'Mock User',
+  //     email: mockProfile.email || mockUser.email,
+  //     role: mockProfile.role || [],
+  //     onboardingCompleted: !!mockProfile.onboardingCompleted,
+  //     ...mockProfile,
+  //   });
+  //   setLoading(false);
+  // };
 
-  const applyMockProfileUpdate = (data = {}) => {
-    setUserProfile((prev) => ({ ...(prev || {}), ...data }));
-  };
+  // const applyMockProfileUpdate = (data = {}) => {
+  //   setUserProfile((prev) => ({ ...(prev || {}), ...data }));
+  // };
 
   // Email sign-up
   const signUp = async (email, password, name) => {
@@ -232,9 +232,9 @@ export const AuthProvider = ({ children }) => {
     signInWithGoogleRedirect,
     signInWithApple,
     refreshUserProfile,
-    // dev helpers
-    loginAsMock,
-    applyMockProfileUpdate,
+    // // dev helpers
+    // loginAsMock,
+    // applyMockProfileUpdate,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -188,9 +188,9 @@ const SignUpPage = () => {
             </div>
 
             {/* Dev helper: mock account */}
-            <div className="mt-4">
+            {/* <div className="mt-4">
               <Button onClick={handleMockAccount} variant="ghost" className="w-full">Continue with Mock Account (dev)</Button>
-            </div>
+            </div> */}
 
             <div className="my-6 flex items-center">
               <div className="flex-grow border-t border-gray-300"></div>
