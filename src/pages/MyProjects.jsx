@@ -1,165 +1,565 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  CheckCircle2,
+  Clock,
+  MoreVertical,
+  FileText,
+  MessageSquare,
+  TrendingUp,
+  AlertCircle,
+  Calendar,
+  DollarSign,
+  ChevronRight,
+  X,
+  Paperclip,
+  Download,
+  ExternalLink
+} from 'lucide-react';
 import PageTransition from '../components/common/PageTransition';
-import { Card, Button } from '../components/common';
-import { Briefcase, AlertTriangle, Pause, Award, Feather, HandshakeIcon, Trophy, PenLine, Play } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { mockProjects } from '../utils/mockData';
 
-const sampleProjects = [
-  {
-    id: 'p1',
-    title: 'Landing page redesign for fintech startup',
-    client: 'FinEdge Solutions',
-    status: 'Active',
-    budget: '₹45,000',
-    acceptancedate: '10-12-2024',
-    deadline: '01-01-2025',
-  },
-  {
-    id: 'p2',
-    title: 'Mobile app UI for e-commerce',
-    client: 'ShopKart',
-    status: 'Completed',
-    budget: '₹1,25,000',
-    acceptancedate: '10-12-2024',
-    deadline: '01-01-2025',
-  },
-  {
-    id: 'p3',
-    title: 'Social media creatives pack',
-    client: 'GrowSocial Agency',
-    status: 'Draft',
-    budget: '₹12,000',
-    acceptancedate: '10-12-2024',
-    deadline: '01-01-2025'
-  },
-];
+// --- Sub-Components (Internal for unique page design) ---
+
+const ProjectDetailsDrawer = ({ project, isOpen, onClose, onToggleMilestone, onAddMilestone }) => {
+  const [newMilestone, setNewMilestone] = useState('');
+
+  if (!isOpen || !project) return null;
+
+  const bannerSubmit = (e) => {
+    e.preventDefault();
+    if (newMilestone.trim()) {
+      onAddMilestone(project.id, newMilestone);
+      setNewMilestone('');
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+          />
+
+          {/* Drawer Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-full md:w-[600px] lg:w-[700px] bg-white shadow-2xl z-[70] overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur z-10 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center font-bold shadow-md">
+                  {project.clientAvatar}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 leading-tight">{project.title}</h2>
+                  <p className="text-xs text-gray-500 font-medium">{project.clientName}</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 md:p-8 space-y-8">
+              {/* Status & Timeline */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Current Status</p>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${project.status === 'Active' ? 'bg-green-500' :
+                        project.status === 'Completed' ? 'bg-gray-400' : 'bg-amber-500'
+                      }`} />
+                    <span className="font-bold text-gray-900">{project.status}</span>
+                  </div>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 mb-1 font-medium">Timeline</p>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-primary-600" />
+                    <span className="font-bold text-gray-900">{new Date(project.dueDate).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Milestones */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <CheckCircle2 size={20} className="text-gray-400" />
+                  Milestones
+                </h3>
+                <div className="space-y-3">
+                  {project.milestones?.map((milestone) => (
+                    <div key={milestone.id}
+                      onClick={() => onToggleMilestone(project.id, milestone.id)}
+                      className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-primary-100 hover:bg-gray-50 transition-all cursor-pointer group"
+                    >
+                      <div className={`mt-1 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${milestone.completed ? 'bg-green-500 border-green-500' : 'border-gray-300 group-hover:border-primary-400'
+                        }`}>
+                        {milestone.completed && <CheckCircle2 size={12} className="text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-medium transition-colors ${milestone.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                          {milestone.title}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">Click to toggle status</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${milestone.completed ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                        {milestone.completed ? 'Done' : 'Pending'}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Add Milestone Input */}
+                  <form onSubmit={bannerSubmit} className="flex gap-2 mt-4">
+                    <input
+                      type="text"
+                      value={newMilestone}
+                      onChange={(e) => setNewMilestone(e.target.value)}
+                      placeholder="Add a new milestone..."
+                      className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 transition-colors"
+                    />
+                    <button type="submit" disabled={!newMilestone.trim()} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                      Add
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              {/* Files & Assets */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Paperclip size={20} className="text-gray-400" />
+                  Files & Assets
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg group cursor-pointer hover:border-primary-200 transition-colors">
+                    <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">
+                      <FileText size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">Project_Specs_v2.pdf</p>
+                      <p className="text-xs text-gray-500">2.4 MB • 2 days ago</p>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-primary-600" />
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg group cursor-pointer hover:border-primary-200 transition-colors">
+                    <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-lg flex items-center justify-center">
+                      <FileText size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">Design_Assets.zip</p>
+                      <p className="text-xs text-gray-500">145 MB • 1 week ago</p>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-primary-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-100 p-6 flex gap-3">
+              <button className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-colors shadow-lg shadow-gray-200">
+                Message Client
+              </button>
+              <button className="px-4 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors">
+                <ExternalLink size={20} />
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const StatusFilterBar = ({ activeStatus, onFilterChange, counts }) => {
+  const tabs = [
+    { id: 'All', label: 'All Projects', count: counts.total },
+    { id: 'Active', label: 'In Progress', count: counts.active },
+    { id: 'In Review', label: 'In Review', count: counts.review },
+    { id: 'Completed', label: 'Completed', count: counts.completed },
+  ];
+
+  return (
+    <div className="flex items-center gap-2 p-1 bg-gray-100/50 backdrop-blur-sm rounded-xl border border-gray-200/50 w-fit mb-8 overflow-x-auto max-w-full">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => onFilterChange(tab.id)}
+          className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeStatus === tab.id
+              ? 'text-gray-900 shadow-sm bg-white'
+              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+            }`}
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            {tab.label}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeStatus === tab.id ? 'bg-gray-100 text-gray-900' : 'bg-gray-200 text-gray-600'
+              }`}>
+              {tab.count}
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      whileHover={{ y: -4, shadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+      className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:border-primary-100 transition-all duration-300 transform-gpu"
+    >
+      {/* Glass / Gradient decorative top */}
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-500 via-purple-500 to-pink-500 rounded-t-2xl opacity-80" />
+
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gray-900 text-white flex items-center justify-center font-bold text-lg shadow-md group-hover:bg-primary-600 transition-colors">
+            {project.clientAvatar}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-700 transition-colors">
+              {project.title}
+            </h3>
+            <p className="text-sm text-gray-500 font-medium">{project.clientName}</p>
+          </div>
+        </div>
+
+        {/* Three Dots Menu */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <MoreVertical size={20} />
+          </button>
+
+          <AnimatePresence>
+            {showMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-20 py-1 overflow-hidden"
+              >
+                <button onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMenuAction('contract', project); }} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors flex items-center gap-2">
+                  <FileText size={16} /> View Contract
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); setShowMenu(false); onMenuAction('upload', project); }} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors flex items-center gap-2">
+                  <Paperclip size={16} /> Upload Deliverable
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Progress Section */}
+      <div className="mb-6">
+        <div className="flex justify-between text-sm mb-2">
+          <span className="font-semibold text-gray-700">Project Progress</span>
+          <span className="font-bold text-primary-600">{project.progress}%</span>
+        </div>
+        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${project.progress}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className={`h-full rounded-full ${project.progress === 100 ? 'bg-green-500' : 'bg-gradient-to-r from-primary-500 to-purple-600'
+              }`}
+          />
+        </div>
+        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+          <TrendingUp size={12} />
+          Next: {project.nextMilestone}
+        </p>
+      </div>
+
+      {/* Grid Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 group-hover:border-primary-100 transition-colors">
+          <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+            <Calendar size={14} /> Due Date
+          </div>
+          <div className="font-semibold text-gray-900 text-sm">
+            {new Date(project.dueDate).toLocaleDateString()}
+          </div>
+        </div>
+        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 group-hover:border-primary-100 transition-colors">
+          <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
+            <DollarSign size={14} /> Budget Used
+          </div>
+          <div className="font-semibold text-gray-900 text-sm">
+            ₹{project.budgetConsumed.toLocaleString()} <span className="text-gray-400 font-normal text-xs">/ ₹{project.budgetTotal.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions Footer */}
+      <div className="flex gap-2 border-t border-gray-100 pt-4">
+        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:border-primary-200 hover:text-primary-600 hover:shadow-sm transition-all">
+          <MessageSquare size={16} /> Chat
+        </button>
+        <button onClick={() => onDetailsClick(project)} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-primary-600 shdaow-sm transition-all">
+          Details <ChevronRight size={16} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+
+// --- Main Page Component ---
 
 const MyProjects = () => {
-  const { userProfile } = useAuth();
-  const [filter, setFilter] = useState('Active');
+  const [filter, setFilter] = useState('All');
+  const [projects, setProjects] = useState(mockProjects);
+  const [selectedProject, setSelectedProject] = useState(null);
 
-  const projects = useMemo(() => sampleProjects, []);
+  // Modal States
+  const [activeModal, setActiveModal] = useState(null); // 'contract' | 'upload'
+  const [modalData, setModalData] = useState(null);
 
-  const filtered = projects.filter((p) => (filter === 'All' ? true : p.status === filter));
+  // Derived Logic: Recalculate counts based on dynamic state
+  const counts = useMemo(() => {
+    return {
+      total: projects.length,
+      active: projects.filter(p => p.status === 'Active').length,
+      review: projects.filter(p => p.status === 'In Review').length,
+      completed: projects.filter(p => p.status === 'Completed').length,
+    }
+  }, [projects]);
+
+  const filteredProjects = projects.filter(p => filter === 'All' ? true : p.status === filter);
+
+  // --- Actions Handlers ---
+
+  // 1. Toggle Milestone: Updates Progress & Budget
+  const handleToggleMilestone = (projectId, milestoneId) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id !== projectId) return p;
+
+      const updatedMilestones = p.milestones.map(m =>
+        m.id === milestoneId ? { ...m, completed: !m.completed } : m
+      );
+
+      // Recalculate Progress
+      const completedCount = updatedMilestones.filter(m => m.completed).length;
+      const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
+
+      // Recalculate Budget (Simple logic: Progress % of Total Budget)
+      // In a real app, each milestone would have a specific value.
+      const newBudgetConsumed = Math.round((newProgress / 100) * p.budgetTotal);
+
+      // Update Status automatically based on progress
+      let newStatus = p.status;
+      if (newProgress === 100) newStatus = 'Completed';
+      else if (newProgress > 0 && p.status === 'open') newStatus = 'Active';
+
+      // If currently selected, update it too so the drawer reflects changes instantly
+      if (selectedProject && selectedProject.id === projectId) {
+        setSelectedProject(prevSelected => ({
+          ...prevSelected,
+          milestones: updatedMilestones,
+          progress: newProgress,
+          budgetConsumed: newBudgetConsumed,
+          status: newStatus
+        }));
+      }
+
+      return {
+        ...p,
+        milestones: updatedMilestones,
+        progress: newProgress,
+        budgetConsumed: newBudgetConsumed,
+        status: newStatus
+      };
+    }));
+  };
+
+  // 2. Add New Milestone
+  const handleAddMilestone = (projectId, title) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id !== projectId) return p;
+      const newMilestone = { id: Date.now(), title, completed: false };
+
+      const updatedMilestones = [...(p.milestones || []), newMilestone];
+
+      // Recalculate Progress (usually drops since total increases)
+      const completedCount = updatedMilestones.filter(m => m.completed).length;
+      const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
+
+      if (selectedProject && selectedProject.id === projectId) {
+        setSelectedProject(prev => ({ ...prev, milestones: updatedMilestones, progress: newProgress }));
+      }
+
+      return { ...p, milestones: updatedMilestones, progress: newProgress };
+    }));
+  };
+
+  // 3. Status Action Handler (from Dropdown)
+  const handleMenuAction = (action, project) => {
+    setModalData(project);
+    setActiveModal(action);
+  };
+
 
   return (
     <PageTransition>
-      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <header className="mt-20 mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Projects</h1>
-              <p className="text-sm text-gray-600 mt-1">Manage your active work, drafts and completed projects.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button className="hidden sm:inline-flex">Create New Project</Button>
-            </div>
+      <main className="min-h-screen bg-gray-50 pt-28 pb-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <header className="mb-10">
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Mission Control</h1>
+            <p className="text-gray-500 mt-2 text-lg">Manage your active contracts and deliverables.</p>
           </header>
 
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {['All', 'Active', 'Completed', 'Draft'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilter(tab)}
-                  className={`text-sm px-3 py-1 rounded-md ${filter === tab ? 'text-primary-600 bg-primary-50 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  {tab}
-                </button>
+          {/* Filter Bar */}
+          <StatusFilterBar activeStatus={filter} onFilterChange={setFilter} counts={counts} />
+
+          {/* Projects Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <AnimatePresence mode='popLayout'>
+              {filteredProjects.map((project) => (
+                <ProjectMissionCard
+                  key={project.id}
+                  project={project}
+                  onDetailsClick={setSelectedProject}
+                  onMenuAction={handleMenuAction} // Pass action handler
+                />
               ))}
-            </div>
-            <div className="text-sm text-gray-500">Showing <span className="font-medium text-gray-700">{filtered.length}</span> projects</div>
-          </div>
+            </AnimatePresence>
 
-          <div className="space-y-6">
-            {filtered.length === 0 ? (
-              <Card className="p-8 text-center">
-                <h3 className="text-lg font-semibold text-gray-900">No projects found</h3>
-                <p className="text-sm text-gray-600 mt-2">Create a new project to get started or switch filters.</p>
-                <div className="mt-4">
-                  <Button>Create Project</Button>
+            {/* Add New Project Placeholder */}
+            {filter !== 'Completed' && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary-300 hover:bg-primary-50/50 transition-all cursor-pointer min-h-[400px] group"
+              >
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400 group-hover:text-primary-500 transition-colors">
+                  <span className="text-3xl font-light">+</span>
                 </div>
-              </Card>
-            ) : (
-              filtered.map((p) => (
-                <Card key={p.id} className="p-6">
-                  <div className="flex items-center gap-6">
-                    <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <Briefcase size={20} className="text-gray-500" />
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">{p.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">Client : {p.client}</p>
-                        </div>
-
-                        <div className="flex flex-col items-end">
-                          <StatusPill status={p.status} />
-                          <div className="text-lg font-semibold text-gray-900 mt-3">{p.budget}</div>
-                        </div>
-                      </div>
-                        
-                      <div className="mt-4 flex items-center gap-4">
-                        {p.deadline && (
-                          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-md text-sm">
-                            <HandshakeIcon size={14} />
-                            <span>Handshaken : {p.acceptancedate}</span>
-                          </div>
-                        )}
-                        {p.deadline && (
-                          <div className="inline-flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-md text-sm">
-                            <AlertTriangle size={14} />
-                            <span>Deadline: {p.deadline}</span>
-                          </div>
-                        )}
-                        </div>
-                        
-                        <div className="mt-4 flex items-center gap-4">
-                        
-                        <a className="text-sm text-primary-600 font-medium">View Details</a>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
+                <h3 className="text-lg font-semibold text-gray-900">New Project</h3>
+                <p className="text-sm text-gray-500 mt-2 max-w-[200px]">Start a new contract or import a mission.</p>
+              </motion.div>
             )}
           </div>
         </div>
+
+        {/* --- Drawers & Modals --- */}
+
+        {/* 1. Project Details Drawer (Enhanced with interactivity) */}
+        <ProjectDetailsDrawer
+          project={selectedProject}
+          isOpen={!!selectedProject}
+          onClose={() => setSelectedProject(null)}
+          onToggleMilestone={handleToggleMilestone}
+          onAddMilestone={handleAddMilestone}
+        />
+
+        {/* 2. Simple Modals for Actions */}
+        <AnimatePresence>
+          {activeModal && (
+            <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => setActiveModal(null)}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden"
+              >
+                {activeModal === 'contract' && (
+                  <div className="p-0">
+                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <FileText size={20} className="text-primary-600" /> Contract Details
+                      </h3>
+                      <button onClick={() => setActiveModal(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Project:</span>
+                        <span className="font-medium">{modalData?.title}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Rate:</span>
+                        <span className="font-medium">₹{modalData?.budgetTotal?.toLocaleString()} (Fixed Price)</span>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 italic border border-gray-100">
+                        "This contract serves as a binding agreement between {modalData?.clientName} and the Freelancer..."
+                        <br /><br />
+                        <span className="text-xs text-gray-400">Signed on {new Date(modalData?.dueDate).toLocaleDateString()}</span>
+                      </div>
+                      <button className="w-full py-2.5 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-medium">Download PDF</button>
+                    </div>
+                  </div>
+                )}
+
+                {activeModal === 'upload' && (
+                  <div className="p-0">
+                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <Paperclip size={20} className="text-primary-600" /> Upload Deliverable
+                      </h3>
+                      <button onClick={() => setActiveModal(null)} className="p-1 hover:bg-gray-200 rounded-full"><X size={20} /></button>
+                    </div>
+                    <div className="p-6">
+                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-primary-400 hover:bg-primary-50/30 transition-all cursor-pointer">
+                        <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-3">
+                          <Download size={24} className="rotate-180" />
+                        </div>
+                        <p className="font-medium text-gray-900">Drag & drop files here</p>
+                        <p className="text-sm text-gray-500 mt-1">or click to browse</p>
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <button onClick={() => setActiveModal(null)} className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium mr-2">Cancel</button>
+                        <button onClick={() => setActiveModal(null)} className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium">Upload</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
     </PageTransition>
   );
 };
-
-// small helper component to render status pill with icon + label
-function StatusPill({ status }) {
-  const base = 'text-xs px-3 py-1 rounded-full inline-flex items-center gap-2';
-  if (status === 'Active') {
-    return (
-      <div className={`${base} bg-green-100 text-green-700`}>
-        <Play size={14} />
-        <span>Active</span>
-      </div>
-    );
-  }
-
-  if (status === 'Completed') {
-    return (
-      <div className={`${base} bg-gray-100 text-gray-700`}>
-        <Trophy size={14} />
-        <span>Completed</span>
-      </div>
-    );
-  }
-
-  // Draft
-  return (
-    <div className={`${base} bg-yellow-100 text-yellow-700`}>
-      <PenLine size={14} />
-      <span>Draft</span>
-    </div>
-  );
-}
 
 export default MyProjects;

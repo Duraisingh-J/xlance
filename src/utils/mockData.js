@@ -159,3 +159,62 @@ export const mockFreelancers = [
     reviews: [],
   },
 ];
+
+export const mockProjects = [
+  {
+    id: 'proj-1',
+    title: 'Fintech Dashboard Revamp',
+    clientName: 'FinEdge Solutions',
+    clientAvatar: 'FE',
+    status: 'Active',
+    progress: 65,
+    dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(), // 14 days left
+    nextMilestone: 'Frontend Integration',
+    budgetTotal: 120000,
+    budgetConsumed: 75000,
+    techStack: ['React', 'Tailwind', 'Chart.js'],
+    milestones: [
+      { id: 1, title: 'UX Research', completed: true },
+      { id: 2, title: 'UI Design System', completed: true },
+      { id: 3, title: 'Frontend Integration', completed: false },
+      { id: 4, title: 'Backend Connection', completed: false },
+    ]
+  },
+  {
+    id: 'proj-2',
+    title: 'E-commerce Mobile App',
+    clientName: 'ShopKart Inc.',
+    clientAvatar: 'SK',
+    status: 'In Review',
+    progress: 95,
+    dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days left
+    nextMilestone: 'Final Testing & Handoff',
+    budgetTotal: 250000,
+    budgetConsumed: 220000,
+    techStack: ['React Native', 'Firebase', 'Redux'],
+    milestones: [
+      { id: 1, title: 'Core Features', completed: true },
+      { id: 2, title: 'Payment Gateway', completed: true },
+      { id: 3, title: 'Admin Panel', completed: true },
+      { id: 4, title: 'App Store Submission', completed: false },
+    ]
+  },
+  {
+    id: 'proj-3',
+    title: 'Corporate Branding Pack',
+    clientName: 'Alpha Corp',
+    clientAvatar: 'AC',
+    status: 'Completed',
+    progress: 100,
+    dueDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30).toISOString(), // 1 month ago
+    nextMilestone: 'Project Closed',
+    budgetTotal: 45000,
+    budgetConsumed: 45000,
+    techStack: ['Illustrator', 'Photoshop', 'Indesign'],
+    milestones: [
+      { id: 1, title: 'Logo Concepts', completed: true },
+      { id: 2, title: 'Brand Guidelines', completed: true },
+      { id: 3, title: 'Stationery Kit', completed: true },
+    ]
+  }
+];
