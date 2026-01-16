@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { updateUserProfile } from "../services/user_services";
+import { userService } from "../services/userService";
 import { Button } from "../components/common";
 
 const RoleSelectionPage = () => {
@@ -51,7 +51,7 @@ const RoleSelectionPage = () => {
     setLoading(true);
     try {
       const rolesArr = role === "both" ? ["client", "freelancer"] : [role];
-      await updateUserProfile(user.uid, {
+      await userService.updateUserProfile(user.uid, {
         role: rolesArr,
         onboardingCompleted: true,
       });
@@ -122,11 +122,10 @@ const RoleSelectionPage = () => {
 const RoleCard = ({ title, description, isSelected, onSelect }) => (
   <div
     onClick={onSelect}
-    className={`p-6 border rounded-lg cursor-pointer transition-all duration-200 ${
-      isSelected
-        ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500"
-        : "border-gray-300 hover:border-gray-400"
-    }`}
+    className={`p-6 border rounded-lg cursor-pointer transition-all duration-200 ${isSelected
+      ? "border-indigo-600 bg-indigo-50 ring-2 ring-indigo-500"
+      : "border-gray-300 hover:border-gray-400"
+      }`}
   >
     <h3 className="text-lg font-bold text-gray-900">{title}</h3>
     <p className="text-sm text-gray-600 mt-1">{description}</p>

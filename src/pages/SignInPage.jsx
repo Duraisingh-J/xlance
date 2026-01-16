@@ -54,7 +54,7 @@ const SignInPage = () => {
     }
   };
 
-  // ✅ GOOGLE SIGN IN (THIS IS THE KEY FIX)
+  // ✅ GOOGLE SIGN IN
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();

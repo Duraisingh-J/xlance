@@ -1,12 +1,10 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { initializeFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDeSPoGNdqnL4gN2DrYagx8_cUMh-YrPGo",
   authDomain: "xlance-b4fc6.firebaseapp.com",
@@ -17,13 +15,13 @@ const firebaseConfig = {
   measurementId: "G-2PDRM32E0W"
 };
 
-
-
-
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+// Use initializeFirestore to force long polling if WebSockets fail, and connect to specific DB
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+}, "xlancedb1");
+export const storage = getStorage(app);
 
-// ✅ EXPORT BOTH
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-
-export default app;
+export { app, auth };

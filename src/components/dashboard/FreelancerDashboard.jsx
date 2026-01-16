@@ -1,17 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Button } from '../common';
-import { MessageCircle, Bell } from 'lucide-react';
 import PageTransition from '../common/PageTransition';
 import { useAuth } from '../../context/AuthContext';
+import { proposalService } from '../../services/proposalService';
+import { Link } from 'react-router-dom';
 
 const FreelancerDashboard = () => {
-  const { userProfile } = useAuth();
-  const name = userProfile?.name || 'Priya';
+  const { userProfile, user } = useAuth();
+  const name = userProfile?.name || user?.displayName || 'Freelancer';
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProposals = async () => {
+      if (user) {
+        try {
+          const data = await proposalService.getProposalsByFreelancer(user.uid);
+          setProposals(data);
+        } catch (err) {
+          console.error("Error fetching proposals:", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchProposals();
+  }, [user]);
 
   return (
     <PageTransition>
-      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+      <main className="pt-28 pb-12 px-3 sm:px-5">
+        <div className="max-w-[95%] xl:max-w-7xl mx-auto">
           <header className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-sm text-gray-600 mt-1">Welcome back, {name}! Here's an overview of your activity.</p>
@@ -20,12 +39,12 @@ const FreelancerDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <Card className="p-6">
               <h3 className="text-sm text-gray-500">Total Earnings</h3>
-              <p className="text-3xl font-bold text-gray-900 mt-3">₹8,50,230</p>
+              <p className="text-3xl font-bold text-gray-900 mt-3">₹0</p>
             </Card>
 
             <Card className="p-6">
-              <h3 className="text-sm text-gray-500">Active Projects</h3>
-              <p className="text-3xl font-bold text-gray-900 mt-3">5</p>
+              <h3 className="text-sm text-gray-500">Submitted Proposals</h3>
+              <p className="text-3xl font-bold text-gray-900 mt-3">{proposals.length}</p>
             </Card>
 
             <Card className="p-6 flex items-center justify-between">
@@ -36,40 +55,35 @@ const FreelancerDashboard = () => {
             </Card>
           </div>
 
-          {/* Messages and Notifications removed per request */}
-
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Job Recommendations</h2>
+            <h2 className="text-lg font-semibold mb-4">Your Recent Proposals</h2>
             <div className="space-y-4">
-              <div className="p-4 border rounded-md flex items-center justify-between">
-                <div>
-                  <a className="text-primary-600 font-medium">Senior React Developer for Fintech App</a>
-                  <p className="text-sm text-gray-600">A fast-growing fintech startup is looking for an experienced React developer to build their next-gen platform.</p>
-                  <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                    <span className="px-2 py-1 bg-gray-100 rounded">React</span>
-                    <span className="px-2 py-1 bg-gray-100 rounded">Fintech</span>
-                    <span className="px-2 py-1 bg-gray-100 rounded">Remote</span>
+              {loading ? (
+                <p>Loading proposals...</p>
+              ) : proposals.length === 0 ? (
+                <p className="text-gray-500">You haven't submitted any proposals yet. Go to "Find Work" to apply!</p>
+              ) : (
+                proposals.map(proposal => (
+                  <div key={proposal.id} className="p-4 border rounded-md flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{proposal.jobTitle || "Job Application"}</h3>
+                      <p className="text-sm text-gray-600">Bid: ₹{proposal.bidAmount}</p>
+                      <p className="text-xs text-gray-400 mt-1">Submitted on {new Date(proposal.createdAt?.seconds * 1000).toLocaleDateString()}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`px-3 py-1 text-sm font-medium rounded-full ${proposal.status === 'accepted' ? 'bg-green-100 text-green-700' :
+                        proposal.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                        {proposal.status || "Pending"}
+                      </span>
+                      <Link to={`/jobs/${proposal.jobId}`}>
+                        <Button variant="outline" size="sm">View Job</Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <Button className="ml-4">View Details</Button>
-                </div>
-              </div>
-
-              <div className="p-4 border rounded-md flex items-center justify-between">
-                <div>
-                  <a className="text-primary-600 font-medium">Graphic Designer for Social Media Content</a>
-                  <p className="text-sm text-gray-600">Marketing agency needs a creative graphic designer to create engaging visuals for various social media platforms.</p>
-                  <div className="flex gap-2 mt-2 text-xs text-gray-500">
-                    <span className="px-2 py-1 bg-gray-100 rounded">Adobe Suite</span>
-                    <span className="px-2 py-1 bg-gray-100 rounded">Social Media</span>
-                    <span className="px-2 py-1 bg-gray-100 rounded">Part-time</span>
-                  </div>
-                </div>
-                <div>
-                  <Button className="ml-4">View Details</Button>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </Card>
         </div>

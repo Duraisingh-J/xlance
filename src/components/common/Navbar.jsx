@@ -69,8 +69,14 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, [isOpen]);
 
+  const isFindWork = location.pathname === '/find-work';
+  // If Find Work page, use absolute (scrolls with page). Else use fixed (sticky/auto-hide).
+  const positionClass = isFindWork ? 'absolute' : 'fixed';
+  // If Find Work page, disable the hide transform (it scrolls away naturally).
+  const transformClass = isFindWork ? '' : (hidden && !isOpen ? '-translate-y-28' : 'translate-y-0');
+
   return (
-    <nav className={`fixed top-6 left-1/2 transform -translate-x-1/2 ${hidden && !isOpen ? '-translate-y-28' : 'translate-y-0'} transition-transform duration-300 w-[calc(100%-2rem)] md:w-[92%] max-w-7xl z-50 bg-white/40 rounded-2xl shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] backdrop-blur-2xl border border-white/30 py-2`}>
+    <nav className={`${positionClass} top-6 left-1/2 transform -translate-x-1/2 ${transformClass} transition-transform duration-300 w-[calc(100%-2rem)] md:w-[92%] max-w-7xl z-50 bg-white/40 rounded-2xl shadow-[0_8px_32px_0_rgba(31,38,135,0.2)] backdrop-blur-2xl border border-white/30 py-2`}>
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           <Link to="/" className="flex items-center gap-2">
@@ -121,7 +127,7 @@ const Navbar = () => {
                     <button className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Notifications">
                       <Bell size={20} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setShowProfileModal(true)}
                       className="w-9 h-9 rounded-full overflow-hidden bg-gray-100 ring-2 ring-transparent hover:ring-primary-300 transition-all cursor-pointer"
                       title="View Profile Progress"
@@ -150,7 +156,7 @@ const Navbar = () => {
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
-            {isOpen && (
+        {isOpen && (
           <div className="md:hidden mt-2 bg-white/30 backdrop-blur-2xl rounded-xl border border-white/30 p-4 space-y-3 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
             {/* Mobile menu: ordered links */}
             {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
@@ -158,7 +164,7 @@ const Navbar = () => {
             )}
             {user ? (
               <>
-                <button 
+                <button
                   onClick={() => { setShowProfileModal(true); setIsOpen(false); }}
                   className="flex items-center gap-3 w-full py-2 text-left"
                 >

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import PageTransition from "../components/common/PageTransition";
 import { Card, Button, Input } from "../components/common";
 import { useAuth } from "../context/AuthContext";
-import { updateUserProfile } from "../services/user_services";
+import { userService } from "../services/userService";
 
 const Onboarding = () => {
   const { user, userProfile, setUserProfile } = useAuth();
@@ -87,10 +87,13 @@ const Onboarding = () => {
         ...prev,
         ...payload,
       }));
-      localStorage.setItem("xlance_profile", JSON.stringify({ ...userProfile, ...payload }));
+      // localStorage.setItem("xlance_profile", JSON.stringify({ ...userProfile, ...payload })); // Managed by AuthContext mostly now, but keeping if needed or removing? Removing to be safe as AuthContext handles it via effect?
+      // Actually AuthContext rewrite I removed manual localStorage management in favor of useEffect on auth state, but I removed the caching logic.
+      // Wait, in my rewritten AuthContext I REMOVED localStorage caching to simplify. User profile is fetched on load.
+      // So I should remove this localStorage line to avoid confusion.
 
       // 🔥 DO NOT BLOCK UI ON FIRESTORE
-      updateUserProfile(user.uid, payload).catch(() => {});
+      userService.updateUserProfile(user.uid, payload).catch((err) => console.error(err));
 
       // 🔥 NAVIGATE IMMEDIATELY
       if (rolesArr.length === 1 && rolesArr[0] === "client") {
@@ -131,25 +134,24 @@ const Onboarding = () => {
                   key={r}
                   type="button"
                   onClick={() => setRoleChoice(r)}
-                  className={`p-4 rounded-lg border transition ${
-                    roleChoice === r
+                  className={`p-4 rounded-lg border transition ${roleChoice === r
                       ? "border-primary-500 bg-primary-50"
                       : "border-gray-200 hover:border-gray-300"
-                  }`}
+                    }`}
                 >
                   <div className="font-semibold">
                     {r === "client"
                       ? "Hire Freelancers"
                       : r === "freelancer"
-                      ? "Work as a Freelancer"
-                      : "Both"}
+                        ? "Work as a Freelancer"
+                        : "Both"}
                   </div>
                   <div className="text-sm text-gray-600">
                     {r === "client"
                       ? "Find and hire top talent"
                       : r === "freelancer"
-                      ? "Find projects and clients"
-                      : "Hire and work on projects"}
+                        ? "Find projects and clients"
+                        : "Hire and work on projects"}
                   </div>
                 </button>
               ))}

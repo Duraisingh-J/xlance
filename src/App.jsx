@@ -21,10 +21,12 @@ import MyProjects from "./pages/MyProjects";
 import Messages from "./pages/Messages";
 import Reports from "./pages/Reports";
 import CreateProfilePage from "./pages/CreateProfilePage";
+import PostJobPage from "./pages/PostJobPage";
+import JobDetailsPage from "./pages/JobDetailsPage";
 
 function AppLayout() {
   const location = useLocation();
-  const { authLoading } = useAuth();
+  const { authLoading, error } = useAuth();
 
   if (authLoading) return <LoadingScreen />;
 
@@ -35,6 +37,11 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
+      {error && (
+        <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-medium">
+          System Error: {error}. Please check your internet connection or try refreshing.
+        </div>
+      )}
       {!isAuthPage && <Navbar />}
 
       <main className="flex-1">
@@ -103,6 +110,24 @@ function AppLayout() {
             element={
               <ProtectedRoute>
                 <CreateProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/post-job"
+            element={
+              <ProtectedRoute>
+                <PostJobPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/jobs/:jobId"
+            element={
+              <ProtectedRoute>
+                <JobDetailsPage />
               </ProtectedRoute>
             }
           />

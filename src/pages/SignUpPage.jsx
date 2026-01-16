@@ -76,7 +76,14 @@ const SignUpPage = () => {
             {/* GOOGLE SIGNUP */}
             <Button
               type="button"
-              onClick={signInWithGoogle}
+              onClick={async () => {
+                try {
+                  await signInWithGoogle();
+                  navigate("/onboarding", { replace: true });
+                } catch (err) {
+                  setErrors({ submit: err.message || "Google signup failed" });
+                }
+              }}
               variant="outline"
               className="w-full flex gap-3 mb-4"
             >
