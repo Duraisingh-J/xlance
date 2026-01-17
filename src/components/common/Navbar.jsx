@@ -11,19 +11,24 @@ const Navbar = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   const location = useLocation();
+
+  // Define logic that doesn't use hooks
+  const isAuthPage = location?.pathname?.startsWith('/auth/');
   const isHome = location?.pathname === '/';
-  // determine dashboard path based on role
+  const pathname = location?.pathname || '';
+
+  // Determine dashboard path based on role
   const dashboardPath = userProfile?.role && Array.isArray(userProfile.role) && userProfile.role.includes('freelancer')
     ? '/dashboard/freelancer'
     : '/dashboard/client';
 
-  // known nav paths (used to decide default active)
+  // Known nav paths (used to decide default active)
   const navPaths = ['/', dashboardPath, '/find-work', '/projects', '/messages', '/reports'];
-  const pathname = location?.pathname || '';
-  // if none of the nav paths match current pathname, we'll default to highlighting the dashboard
+
+  // If none of the nav paths match current pathname, we'll default to highlighting the dashboard
   const activeFound = navPaths.some((p) => pathname.startsWith(p));
 
-  // helper to compute active class for nav links
+  // Helper to compute active class for nav links
   const getLinkClass = (to) => {
     const base = 'text-gray-600 hover:text-gray-900 transition-colors';
     const active = 'text-primary-600 font-semibold bg-primary-50 px-2 py-1 rounded-md';
@@ -39,12 +44,12 @@ const Navbar = () => {
     setIsOpen(false);
   };
 
-  // hide on scroll down, show on scroll up
+  // 🛠️ HOOKS MUST BE CALLED BEFORE EARLY RETURNS 🛠️
   const prevScrollY = useRef(typeof window !== 'undefined' ? window.scrollY : 0);
+
   useEffect(() => {
     const onScroll = () => {
       const current = window.scrollY || window.pageYOffset || 0;
-      // if mobile menu is open, keep navbar visible
       if (isOpen) {
         prevScrollY.current = current;
         setHidden(false);
@@ -52,13 +57,11 @@ const Navbar = () => {
       }
 
       const delta = current - prevScrollY.current;
-      const threshold = 10; // small threshold to avoid jitter
+      const threshold = 10;
 
       if (delta > threshold && current > 40) {
-        // scrolling down
         setHidden(true);
       } else if (prevScrollY.current - current > threshold) {
-        // scrolling up
         setHidden(false);
       }
 
@@ -68,6 +71,9 @@ const Navbar = () => {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [isOpen]);
+
+  // 🚦 NOW WE CAN RETURN EARLY 🚦
+  if (isAuthPage) return null;
 
   const isFindWork = location.pathname === '/find-work';
   // If Find Work page, use absolute (scrolls with page). Else use fixed (sticky/auto-hide).
@@ -88,7 +94,6 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-8">
             {isHome ? (
-              // Render original simple home navbar
               <>
                 <Link to="/" className={homeLinkClass}>Home</Link>
                 {user ? (
@@ -109,13 +114,10 @@ const Navbar = () => {
                 )}
               </>
             ) : (
-              // Render expanded navbar for app pages (dashboard, find work, etc.)
               <>
-                {/* If user is a freelancer, hide the Home link */}
                 {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
                   <Link to="/" className={getLinkClass('/')}>Home</Link>
                 )}
-
                 <Link to={dashboardPath} className={getLinkClass(dashboardPath)}>Dashboard</Link>
                 <Link to="/find-work" className={getLinkClass('/find-work')}>Find Work</Link>
                 <Link to="/projects" className={getLinkClass('/projects')}>My Projects</Link>
@@ -158,9 +160,8 @@ const Navbar = () => {
         </div>
         {isOpen && (
           <div className="md:hidden mt-2 bg-white/30 backdrop-blur-2xl rounded-xl border border-white/30 p-4 space-y-3 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
-            {/* Mobile menu: ordered links */}
             {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
-              <Link to="/" className={(isHome ? homeLinkClass : getLinkClass('/')) + ' block py-2'}>Home</Link>
+              <Link to="/" onClick={() => setIsOpen(false)} className={(isHome ? homeLinkClass : getLinkClass('/')) + ' block py-2'}>Home</Link>
             )}
             {user ? (
               <>
@@ -177,11 +178,11 @@ const Navbar = () => {
                   </div>
                 </button>
                 <div className="border-t border-white/30 my-2" />
-                <Link to={dashboardPath} className={getLinkClass(dashboardPath) + ' block py-2'}>Dashboard</Link>
-                <Link to="/find-work" className={getLinkClass('/find-work') + ' block py-2'}>Find Work</Link>
-                <Link to="/projects" className={getLinkClass('/projects') + ' block py-2'}>My Projects</Link>
-                <Link to="/messages" className={getLinkClass('/messages') + ' block py-2'}>Messages</Link>
-                <Link to="/reports" className={getLinkClass('/reports') + ' block py-2'}>Reports</Link>
+                <Link to={dashboardPath} onClick={() => setIsOpen(false)} className={getLinkClass(dashboardPath) + ' block py-2'}>Dashboard</Link>
+                <Link to="/find-work" onClick={() => setIsOpen(false)} className={getLinkClass('/find-work') + ' block py-2'}>Find Work</Link>
+                <Link to="/projects" onClick={() => setIsOpen(false)} className={getLinkClass('/projects') + ' block py-2'}>My Projects</Link>
+                <Link to="/messages" onClick={() => setIsOpen(false)} className={getLinkClass('/messages') + ' block py-2'}>Messages</Link>
+                <Link to="/reports" onClick={() => setIsOpen(false)} className={getLinkClass('/reports') + ' block py-2'}>Reports</Link>
                 <button onClick={handleSignOut} className="w-full text-left text-gray-600 hover:text-gray-900 py-2">Sign Out</button>
               </>
             ) : (
@@ -198,7 +199,6 @@ const Navbar = () => {
         )}
       </div>
 
-      {/* Profile Completion Modal */}
       <ProfileCompletionModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
     </nav>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Button } from '../components/common';
-import { DownloadCloud, TrendingUp, TrendingDown, DollarSign, Briefcase, CheckCircle, Star, Users, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { DownloadCloud, TrendingUp, TrendingDown, IndianRupee, Briefcase, CheckCircle, Star, Users, Calendar, Clock, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const mockSummary = {
@@ -164,7 +164,7 @@ const Reports = () => {
             title="Total Earnings"
             value={currency(mockSummary.totalEarnings)}
             trend={mockSummary.trends.earnings}
-            icon={DollarSign}
+            icon={IndianRupee}
             gradient="from-green-500 to-emerald-600"
           />
           <EnhancedStatCard

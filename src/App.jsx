@@ -4,52 +4,56 @@ import {
   Routes,
   Route,
   Navigate,
-  useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { JobsProvider } from "./context/JobsContext";
-import { Navbar, Footer, ScrollToTop, LoadingScreen } from "./components/common";
+import { Navbar, Footer, ScrollToTop } from "./components/common";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import HomePage from "./pages/HomePage";
-import SignUpPage from "./pages/SignUpPage";
 import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
 import Onboarding from "./pages/Onboarding";
 import DashboardPage from "./pages/DashboardPage";
 import FindWorkPage from "./pages/FindWorkPage";
+import Reports from "./pages/Reports";
+import JobDetailsPage from "./pages/JobDetailsPage";
 import MyProjects from "./pages/MyProjects";
 import Messages from "./pages/Messages";
-import Reports from "./pages/Reports";
-import CreateProfilePage from "./pages/CreateProfilePage";
 import PostJobPage from "./pages/PostJobPage";
-import JobDetailsPage from "./pages/JobDetailsPage";
+import CreateProfilePage from "./pages/CreateProfilePage";
 
 function AppLayout() {
-  const location = useLocation();
   const { authLoading, error } = useAuth();
 
-  if (authLoading) return <LoadingScreen />;
-
-  const isAuthPage = ["/auth/signin", "/auth/signup", "/onboarding"].includes(
-    location.pathname
-  );
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading XLance...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
+
       {error && (
-        <div className="bg-red-600 text-white px-4 py-2 text-center text-sm font-medium">
-          System Error: {error}. Please check your internet connection or try refreshing.
+        <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium z-[100]">
+          {typeof error === 'string' ? error : 'A system error occurred. Please refresh.'}
         </div>
       )}
-      {!isAuthPage && <Navbar />}
+
+      <Navbar />
 
       <main className="flex-1">
         <Routes>
           <Route path="/" element={<HomePage />} />
-
-          <Route path="/auth/signup" element={<SignUpPage />} />
           <Route path="/auth/signin" element={<SignInPage />} />
+          <Route path="/auth/signup" element={<SignUpPage />} />
 
           <Route
             path="/onboarding"
@@ -79,6 +83,24 @@ function AppLayout() {
           />
 
           <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/jobs/:jobId"
+            element={
+              <ProtectedRoute>
+                <JobDetailsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/projects"
             element={
               <ProtectedRoute>
@@ -97,10 +119,10 @@ function AppLayout() {
           />
 
           <Route
-            path="/reports"
+            path="/post-job"
             element={
               <ProtectedRoute>
-                <Reports />
+                <PostJobPage />
               </ProtectedRoute>
             }
           />
@@ -114,29 +136,11 @@ function AppLayout() {
             }
           />
 
-          <Route
-            path="/post-job"
-            element={
-              <ProtectedRoute>
-                <PostJobPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/jobs/:jobId"
-            element={
-              <ProtectedRoute>
-                <JobDetailsPage />
-              </ProtectedRoute>
-            }
-          />
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
-      {!isAuthPage && <Footer />}
+      <Footer />
     </div>
   );
 }

@@ -9,7 +9,7 @@ const RoleSelectionPage = () => {
   const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { user, loading: authLoading, userProfile } = useAuth();
+  const { user, authLoading, userProfile } = useAuth();
   const navigate = useNavigate();
 
   // If not logged in, send to sign in

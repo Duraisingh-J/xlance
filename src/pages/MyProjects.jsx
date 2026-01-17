@@ -9,12 +9,12 @@ import {
   TrendingUp,
   AlertCircle,
   Calendar,
-  DollarSign,
-  ChevronRight,
   X,
+  IndianRupee,
   Paperclip,
   Download,
-  ExternalLink
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 import PageTransition from '../components/common/PageTransition';
 import { mockProjects } from '../utils/mockData';
@@ -78,7 +78,7 @@ const ProjectDetailsDrawer = ({ project, isOpen, onClose, onToggleMilestone, onA
                   <p className="text-xs text-gray-500 mb-1 font-medium">Current Status</p>
                   <div className="flex items-center gap-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${project.status === 'Active' ? 'bg-green-500' :
-                        project.status === 'Completed' ? 'bg-gray-400' : 'bg-amber-500'
+                      project.status === 'Completed' ? 'bg-gray-400' : 'bg-amber-500'
                       }`} />
                     <span className="font-bold text-gray-900">{project.status}</span>
                   </div>
@@ -199,8 +199,8 @@ const StatusFilterBar = ({ activeStatus, onFilterChange, counts }) => {
           key={tab.id}
           onClick={() => onFilterChange(tab.id)}
           className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeStatus === tab.id
-              ? 'text-gray-900 shadow-sm bg-white'
-              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
+            ? 'text-gray-900 shadow-sm bg-white'
+            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
             }`}
         >
           <span className="relative z-10 flex items-center gap-2">
@@ -319,7 +319,7 @@ const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction }) => {
         </div>
         <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 group-hover:border-primary-100 transition-colors">
           <div className="flex items-center gap-2 text-gray-500 text-xs mb-1">
-            <DollarSign size={14} /> Budget Used
+            <IndianRupee size={14} /> Budget Used
           </div>
           <div className="font-semibold text-gray-900 text-sm">
             ₹{project.budgetConsumed.toLocaleString()} <span className="text-gray-400 font-normal text-xs">/ ₹{project.budgetTotal.toLocaleString()}</span>

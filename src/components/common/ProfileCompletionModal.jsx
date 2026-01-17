@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, Circle, User, Mail, Briefcase, MapPin, DollarSign, Award, Save, Edit2, Upload } from 'lucide-react';
+import { X, CheckCircle2, Circle, User, Mail, Briefcase, MapPin, IndianRupee, Award, Save, Edit2, Upload, Star, ShieldCheck, Zap, Laptop, Users, Rocket, Trophy } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
 
@@ -22,18 +22,7 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         completed: !!(userProfile?.name || user?.displayName),
         type: 'text',
         placeholder: 'Enter your full name',
-        category: 'basic',
-      },
-      {
-        id: 'email',
-        label: 'Email Address',
-        icon: Mail,
-        value: userProfile?.email || user?.email || '',
-        completed: !!(userProfile?.email || user?.email),
-        type: 'email',
-        placeholder: 'your@email.com',
-        category: 'basic',
-        readonly: true,
+        category: 'Basic',
       },
       {
         id: 'photoURL',
@@ -42,8 +31,8 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         value: userProfile?.photoURL || user?.photoURL || '',
         completed: !!(userProfile?.photoURL || user?.photoURL),
         type: 'file',
-        placeholder: 'Upload profile photo',
-        category: 'basic',
+        placeholder: 'Paste photo URL (or upload)',
+        category: 'Basic',
       },
       {
         id: 'role',
@@ -52,9 +41,13 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         value: userProfile?.role ? (Array.isArray(userProfile.role) ? userProfile.role.join(', ') : userProfile.role) : '',
         completed: !!(userProfile?.role && (Array.isArray(userProfile.role) ? userProfile.role.length > 0 : userProfile.role)),
         type: 'select',
-        options: ['Freelancer', 'Client', 'Both'],
-        placeholder: 'Select your role',
-        category: 'role',
+        options: [
+          { value: 'Freelancer', icon: Laptop, desc: 'I want to offer my services' },
+          { value: 'Client', icon: Users, desc: 'I want to hire talent' },
+          { value: 'Both', icon: Rocket, desc: 'I want to do both' }
+        ],
+        placeholder: 'How will you use Xlance?',
+        category: 'Professional',
       },
       {
         id: 'skills',
@@ -64,7 +57,7 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         completed: !!(userProfile?.skills && Array.isArray(userProfile.skills) && userProfile.skills.length > 0),
         type: 'text',
         placeholder: 'e.g., React, Python, UI/UX Design',
-        category: 'role',
+        category: 'Professional',
       },
       {
         id: 'bio',
@@ -74,18 +67,7 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         completed: !!(userProfile?.bio || userProfile?.description),
         type: 'textarea',
         placeholder: 'Tell us about your expertise and experience...',
-        category: 'role',
-      },
-      {
-        id: 'experienceLevel',
-        label: 'Experience Level',
-        icon: Award,
-        value: userProfile?.experienceLevel || userProfile?.experience || '',
-        completed: !!(userProfile?.experienceLevel || userProfile?.experience),
-        type: 'select',
-        options: ['Beginner', 'Intermediate', 'Expert', 'Professional'],
-        placeholder: 'Select experience level',
-        category: 'professional',
+        category: 'Professional',
       },
       {
         id: 'location',
@@ -95,24 +77,46 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         completed: !!(userProfile?.location),
         type: 'text',
         placeholder: 'e.g., Mumbai, India',
-        category: 'professional',
+        category: 'Professional',
       },
       {
         id: 'hourlyRate',
         label: 'Hourly Rate (₹)',
-        icon: DollarSign,
+        icon: IndianRupee,
         value: userProfile?.hourlyRate || userProfile?.rate || '',
         completed: !!(userProfile?.hourlyRate || userProfile?.rate),
         type: 'number',
         placeholder: 'e.g., 1500',
-        category: 'professional',
+        category: 'Expert',
+      },
+      {
+        id: 'experienceLevel',
+        label: 'Experience Level',
+        icon: Award,
+        value: userProfile?.experienceLevel || userProfile?.experience || '',
+        completed: !!(userProfile?.experienceLevel || userProfile?.experience),
+        type: 'select',
+        options: [
+          { value: 'Beginner', icon: Star, desc: 'New to this field' },
+          { value: 'Intermediate', icon: Zap, desc: 'Solid professional experience' },
+          { value: 'Expert', icon: ShieldCheck, desc: 'Highly experienced specialist' },
+          { value: 'Professional', icon: Trophy, desc: 'Top-tier industry leader' }
+        ],
+        placeholder: 'Select experience level',
+        category: 'Expert',
       },
     ];
   }, [userProfile, user]);
 
-  const totalFields = profileFields.length;
   const completedFields = profileFields.filter(f => f.completed).length;
-  const completionPercentage = totalFields > 0 ? Math.round((completedFields / totalFields) * 100) : 0;
+  const completionPercentage = profileFields.length > 0 ? Math.round((completedFields / profileFields.length) * 100) : 0;
+
+  // Determine Tier
+  const tier = useMemo(() => {
+    if (completionPercentage >= 100) return { name: 'Elite Partner', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500', level: 3, benefits: ['Priority Bidding', 'Verified Badge', 'Fee Reduction'] };
+    if (completionPercentage >= 60) return { name: 'Verified Pro', icon: ShieldCheck, color: 'text-primary-600', bg: 'bg-primary-600', level: 2, benefits: ['Smart Matching', 'Custom Proposals'] };
+    return { name: 'Basic Talent', icon: User, color: 'text-gray-500', bg: 'bg-gray-500', level: 1, benefits: ['Standard Features'] };
+  }, [completionPercentage]);
 
   const handleEdit = (field) => {
     setEditingField(field.id);
@@ -127,13 +131,7 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
   const handleSave = async (field) => {
     setSaving(true);
     try {
-      // Simulate save - replace with actual Firestore update
       await new Promise(resolve => setTimeout(resolve, 800));
-      console.log('Saving field:', field.id, formData[field.id]);
-      
-      // TODO: Add actual Firestore update here
-      // await updateUserProfile(user.uid, { [field.id]: formData[field.id] });
-      
       setEditingField(null);
       setFormData({});
     } catch (error) {
@@ -147,200 +145,93 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
     const isEditing = editingField === field.id;
     const value = isEditing ? (formData[field.id] ?? field.value) : field.value;
 
-    if (field.readonly) {
-      return (
-        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <span className="text-sm text-gray-700">{value || 'Not set'}</span>
-          <span className="text-xs text-gray-500 italic">Read-only</span>
-        </div>
-      );
-    }
-
-    // Special handling for photo upload
-    if (field.type === 'file') {
-      if (!isEditing) {
-        return (
-          <div className="flex items-center gap-3">
-            {value ? (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary-200 transition group flex-1">
-                <img src={value} alt="Profile" className="w-12 h-12 rounded-full object-cover" />
-                <span className="text-sm text-gray-700 flex-1">Photo uploaded</span>
-                <button
-                  onClick={() => handleEdit(field)}
-                  className="p-1.5 rounded-md text-primary-600 hover:bg-primary-50 transition opacity-0 group-hover:opacity-100"
-                  title="Change photo"
-                >
-                  <Edit2 size={14} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => handleEdit(field)}
-                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary-400 hover:bg-primary-50/30 transition group"
-              >
-                <div className="flex flex-col items-center gap-2 text-gray-500 group-hover:text-primary-600">
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm font-medium">Click to upload profile photo</span>
-                  <span className="text-xs">PNG, JPG up to 5MB</span>
-                </div>
-              </button>
-            )}
-          </div>
-        );
-      }
-
-      return (
-        <div className="space-y-3">
-          <label className="flex flex-col items-center gap-3 p-6 border-2 border-dashed border-primary-300 rounded-lg bg-primary-50/30 cursor-pointer hover:bg-primary-50 transition">
-            <svg className="w-12 h-12 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <div className="text-center">
-              <span className="text-sm font-semibold text-primary-700">Drop your photo here or click to browse</span>
-              <p className="text-xs text-gray-600 mt-1">Supports: JPG, PNG, GIF (Max 5MB)</p>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  // Preview the image
-                  const reader = new FileReader();
-                  reader.onloadend = () => {
-                    setFormData({ ...formData, [field.id]: reader.result });
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-            />
-          </label>
-          
-          {formData[field.id] && (
-            <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg">
-              <img src={formData[field.id]} alt="Preview" className="w-16 h-16 rounded-full object-cover" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">Preview</p>
-                <p className="text-xs text-gray-500">New profile photo</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => handleSave(field)}
-              disabled={saving || !formData[field.id]}
-              isLoading={saving}
-              className="flex-1"
-            >
-              <Save size={14} className="mr-1" />
-              Save Photo
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleCancel}
-              disabled={saving}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
     if (!isEditing) {
       return (
-        <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-xl border border-gray-200 hover:border-primary-300 hover:shadow-sm transition-all group">
-          <span className="text-sm text-gray-800 flex-1 truncate font-medium">
+        <div className="flex items-center justify-between p-3.5 bg-white/40 rounded-2xl border border-white/60 hover:border-primary-300 hover:bg-white transition-all group shadow-sm backdrop-blur-sm">
+          <span className="text-sm text-gray-700 flex-1 truncate font-medium">
             {value || <span className="text-gray-400 font-normal italic">{field.placeholder}</span>}
           </span>
           <button
             onClick={() => handleEdit(field)}
-            className="ml-2 p-2 rounded-lg text-primary-600 bg-white hover:bg-primary-50 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
-            title="Edit"
+            className="ml-2 p-2 rounded-xl text-primary-600 bg-primary-50 hover:bg-primary-100 transition-all opacity-0 group-hover:opacity-100"
           >
-            <Edit2 size={14} />
+            <Edit2 size={12} />
           </button>
         </div>
       );
     }
 
     return (
-      <div className="space-y-3">
-        <div className="relative">
-          {field.type === 'textarea' ? (
+      <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+        {field.id === 'photoURL' ? (
+          <div className="flex items-center gap-4 p-4 bg-white/60 rounded-3xl border border-white/80 shadow-inner">
+            <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-400 border-2 border-primary-100 overflow-hidden shadow-sm">
+              {value ? <img src={value} className="w-full h-full object-cover" /> : <Upload size={24} />}
+            </div>
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
+              placeholder="Paste photo URL"
+              className="flex-1 px-4 py-3 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:outline-none text-sm transition-all shadow-sm"
+            />
+          </div>
+        ) : field.type === 'textarea' ? (
+          <div className="relative">
             <textarea
               value={value}
               onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
               placeholder={field.placeholder}
-              rows={4}
-              className="w-full px-4 py-3 border-2 border-primary-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white shadow-sm transition-all resize-none"
+              className="w-full px-5 py-4 bg-white border border-gray-100 rounded-3xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:outline-none text-sm shadow-inner min-h-[120px] transition-all"
             />
-          ) : field.type === 'select' ? (
-            <div className="relative">
-              <select
-                value={value}
-                onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-primary-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white shadow-sm appearance-none cursor-pointer transition-all"
-              >
-                <option value="">{field.placeholder}</option>
-                {field.options?.map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-              <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            <div className="absolute bottom-4 right-5 text-[10px] font-bold text-gray-400 bg-gray-50/80 px-2 py-1 rounded-full uppercase">
+              {value?.length || 0} Chars
             </div>
-          ) : (
+          </div>
+        ) : field.type === 'select' ? (
+          <div className="grid grid-cols-1 gap-2.5">
+            {field.options?.map(opt => {
+              const OptIcon = opt.icon;
+              const isSelected = value === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, [field.id]: opt.value })}
+                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected
+                      ? 'border-primary-500 bg-primary-50/50 shadow-lg shadow-primary-500/10'
+                      : 'border-gray-100 bg-white hover:border-primary-200'
+                    }`}
+                >
+                  <div className={`p-2 rounded-lg ${isSelected ? 'bg-primary-500 text-white' : 'bg-gray-50 text-gray-400'}`}>
+                    <OptIcon size={18} />
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-sm font-black ${isSelected ? 'text-primary-700' : 'text-gray-700'}`}>{opt.value}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{opt.desc}</p>
+                  </div>
+                  {isSelected && <CheckCircle2 size={16} className="ml-auto text-primary-500" />}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="relative group">
             <input
               type={field.type}
               value={value}
               onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
               placeholder={field.placeholder}
-              className="w-full px-4 py-3 border-2 border-primary-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm bg-white shadow-sm transition-all"
+              className="w-full px-5 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:outline-none text-sm shadow-sm transition-all"
             />
-          )}
-          
-          {/* Character count for textarea */}
-          {field.type === 'textarea' && value && (
-            <div className="absolute bottom-2 right-2 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
-              {value.length} characters
-            </div>
-          )}
-
-          {/* Prefix icon for number inputs */}
-          {field.type === 'number' && (
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
-          )}
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => handleSave(field)}
-            disabled={saving || !formData[field.id]}
-            isLoading={saving}
-            className="flex-1 shadow-md hover:shadow-lg transition-shadow"
-          >
-            <Save size={14} className="mr-1.5" />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={saving}
-            className="px-6"
-          >
-            Cancel
-          </Button>
+            {field.type === 'number' && (
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 text-primary-600 font-black text-xs uppercase tracking-widest bg-primary-50 px-2 py-1 rounded-lg">INR</span>
+            )}
+          </div>
+        )}
+        <div className="flex gap-3 pt-2">
+          <Button size="sm" onClick={() => handleSave(field)} isLoading={saving} className="flex-1 rounded-2xl shadow-lg shadow-primary-500/10">Save Configuration</Button>
+          <Button size="sm" variant="ghost" onClick={handleCancel} className="rounded-2xl">Cancel</Button>
         </div>
       </div>
     );
@@ -350,150 +241,175 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
-          />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        {/* Backdrop with extreme blur */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-gray-950/70 backdrop-blur-2xl"
+        />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 40 }}
-            transition={{ type: 'spring', duration: 0.5 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-2xl bg-white rounded-3xl shadow-2xl z-50 overflow-hidden"
-          >
-            {/* Unique Gradient Header with Glassmorphism */}
-            <div className="relative bg-gradient-to-br from-primary-500 via-primary-600 to-purple-600 p-8 overflow-hidden">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-30" />
-              
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition"
-                aria-label="Close"
-              >
-                <X size={20} className="text-white" />
-              </button>
+        {/* Modal Container */}
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 30 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 30 }}
+          className="relative bg-white/70 backdrop-blur-[40px] rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row border border-white/60"
+        >
+          {/* Dashboard/Left Column */}
+          <div className="w-full md:w-[340px] bg-gradient-to-br from-gray-950 via-gray-900 to-black p-10 text-white flex flex-col">
+            <div className="mb-10">
+              <div className="flex justify-between items-center mb-10">
+                <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-primary-600/30">X</div>
+                <button onClick={onClose} className="p-2.5 border border-white/10 rounded-full hover:bg-white/10 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <h2 className="text-3xl font-black tracking-tighter mb-2">Profile Intel</h2>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest leading-relaxed">System Optimization Engine v2.0</p>
+            </div>
 
-              <div className="relative flex items-start gap-6">
-                {/* Animated Progress Ring */}
-                <div className="relative">
-                  <svg className="transform -rotate-90 w-24 h-24">
-                    <circle
-                      cx="48"
-                      cy="48"
-                      r="44"
-                      stroke="white"
-                      strokeWidth="6"
-                      fill="none"
-                      className="opacity-20"
-                    />
-                    <motion.circle
-                      cx="48"
-                      cy="48"
-                      r="44"
-                      stroke="white"
-                      strokeWidth="6"
-                      fill="none"
-                      strokeDasharray={`${2 * Math.PI * 44}`}
-                      strokeDashoffset={`${2 * Math.PI * 44 * (1 - completionPercentage / 100)}`}
-                      className="drop-shadow-lg"
-                      strokeLinecap="round"
-                      initial={{ strokeDashoffset: 2 * Math.PI * 44 }}
-                      animate={{ strokeDashoffset: 2 * Math.PI * 44 * (1 - completionPercentage / 100) }}
-                      transition={{ duration: 1, ease: 'easeOut' }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-white">{completionPercentage}%</div>
-                      <div className="text-xs text-white/80">Complete</div>
-                    </div>
+            {/* Premium Progress Visual */}
+            <div className="relative w-52 h-52 mx-auto mb-12 group">
+              <svg className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                <circle cx="104" cy="104" r="92" stroke="currentColor" strokeWidth="16" fill="transparent" className="text-white/5" />
+                <motion.circle
+                  cx="104"
+                  cy="104"
+                  r="92"
+                  stroke="currentColor"
+                  strokeWidth="16"
+                  fill="transparent"
+                  strokeDasharray={2 * Math.PI * 92}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 92 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 92 * (1 - completionPercentage / 100) }}
+                  className={`${tier.color} drop-shadow-[0_0_20px_rgba(37,99,235,0.4)]`}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-black tracking-tighter">{completionPercentage}%</span>
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mt-2">Efficiency</span>
+              </div>
+            </div>
+
+            {/* Tier Roadmap */}
+            <div className="space-y-6 flex-1">
+              <div className="bg-white/5 rounded-3xl p-6 border border-white/10 backdrop-blur-md relative overflow-hidden group hover:border-primary-500/30 transition-all">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-primary-500/10 rounded-full blur-3xl -mr-12 -mt-12" />
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`p-3 rounded-xl ${tier.bg} bg-opacity-20 shadow-inner`}>
+                    <tier.icon size={22} className={tier.color} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Current Tier</p>
+                    <p className={`text-base font-black ${tier.color}`}>{tier.name}</p>
                   </div>
                 </div>
 
-                <div className="flex-1 text-white">
-                  <h2 className="text-3xl font-bold mb-2">Complete Your Profile</h2>
-                  <p className="text-white/90 text-sm mb-3">
-                    Fill in your details to unlock all features and get better job matches
-                  </p>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 size={16} />
-                    <span>{completedFields} of {totalFields} fields completed</span>
+                <div className="space-y-3">
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Active Benefits</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {tier.benefits.map((b, i) => (
+                      <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-gray-300">
+                        <CheckCircle2 size={12} className="text-emerald-500" />
+                        {b}
+                      </div>
+                    ))}
                   </div>
+                </div>
+              </div>
+
+              <div className="px-4">
+                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4">Platform Roadmap</p>
+                <div className="space-y-4">
+                  {[
+                    { l: 'Basic', c: 'text-gray-500', done: true },
+                    { l: 'Verified', c: completionPercentage >= 60 ? 'text-primary-500' : 'text-gray-700', done: completionPercentage >= 60 },
+                    { l: 'Elite', c: completionPercentage >= 100 ? 'text-amber-500' : 'text-gray-700', done: completionPercentage >= 100 }
+                  ].map((step, idx) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${step.done ? step.c.replace('text', 'bg') : 'bg-gray-800'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${step.c}`}>{step.l} Access</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Body with Editable Fields */}
-            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
-              {profileFields.map((field) => {
-                const Icon = field.icon;
-                
-                return (
-                  <motion.div
-                    key={field.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      field.completed 
-                        ? 'border-green-200 bg-green-50/50' 
-                        : editingField === field.id
-                        ? 'border-primary-300 bg-primary-50/50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2.5 rounded-lg flex-shrink-0 ${
-                        field.completed ? 'bg-green-100' : 'bg-gray-100'
-                      }`}>
-                        <Icon size={18} className={field.completed ? 'text-green-600' : 'text-gray-600'} />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold text-gray-900">{field.label}</h3>
-                          {field.completed && (
-                            <CheckCircle2 size={18} className="text-green-500 flex-shrink-0" />
-                          )}
+            <div className="pt-8 mt-10 border-t border-white/10">
+              <div className="flex items-center gap-4 text-gray-500 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
+                <ShieldCheck size={20} className="text-emerald-500 group-hover:scale-110 transition-transform" />
+                <div>
+                  <span className="block text-[10px] font-black uppercase tracking-widest">Secured Core</span>
+                  <span className="text-[9px] font-bold text-gray-600 uppercase tracking-tight">Identity Encryption Active</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Dynamic Form UI */}
+          <div className="flex-1 p-10 md:p-14 max-h-[90vh] overflow-y-auto bg-white/40">
+            <div className="mb-14">
+              <div className="inline-block px-3 py-1 bg-primary-100/50 text-primary-700 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-primary-200">System Configuration</div>
+              <h3 className="text-4xl font-black text-gray-950 tracking-tight mb-3">Refine Professional Identity</h3>
+              <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px] opacity-70">Execute parameters to reach peak platform ranking.</p>
+            </div>
+
+            {/* Categorized Fields */}
+            {['Basic', 'Professional', 'Expert'].map((cat) => {
+              const fields = profileFields.filter(f => f.category === cat);
+              if (fields.length === 0) return null;
+
+              return (
+                <div key={cat} className="mb-14 last:mb-0">
+                  <h4 className="flex items-center gap-3 text-[11px] font-black text-primary-600 uppercase tracking-[0.3em] mb-8">
+                    <div className="w-10 h-[3px] bg-primary-600 rounded-full" />
+                    {cat} Intelligence
+                  </h4>
+                  <div className="space-y-6">
+                    {fields.map((field) => {
+                      const Icon = field.icon;
+                      const isFieldEditing = editingField === field.id;
+                      return (
+                        <div key={field.id} className={`group relative p-7 rounded-[2.5rem] border-2 transition-all duration-500 ${field.completed && !isFieldEditing
+                            ? 'bg-emerald-50/40 border-emerald-100/60 shadow-sm'
+                            : isFieldEditing
+                              ? 'bg-white border-primary-200 shadow-2xl scale-[1.02] z-10'
+                              : 'bg-white/40 border-white/80 shadow-sm hover:border-primary-100 hover:bg-white'
+                          }`}>
+                          <div className="flex items-start gap-6">
+                            <div className={`p-4 rounded-3xl ${field.completed ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'} transition-all duration-500 group-hover:scale-110 shadow-sm`}>
+                              <Icon size={24} />
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-center mb-3">
+                                <label className="text-[11px] font-black text-gray-950 uppercase tracking-[0.2em]">{field.label}</label>
+                                {field.completed && <CheckCircle2 size={18} className="text-emerald-500 animate-in zoom-in duration-300" />}
+                              </div>
+                              {renderFieldInput(field)}
+                            </div>
+                          </div>
                         </div>
-                        
-                        {renderFieldInput(field)}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  {completionPercentage === 100 ? (
-                    <span className="text-green-600 font-semibold flex items-center gap-2">
-                      <CheckCircle2 size={16} />
-                      Profile Complete! 🎉
-                    </span>
-                  ) : (
-                    <span>Complete your profile to stand out</span>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
-                <Button onClick={onClose}>
-                  Done
-                </Button>
-              </div>
+              );
+            })}
+
+            {/* Done Action */}
+            <div className="pt-12 flex justify-between items-center">
+              <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest italic">All changes are localized to your session</p>
+              <Button onClick={onClose} size="lg" className="px-12 py-4 rounded-3xl shadow-xl shadow-primary-500/20 font-black text-xs uppercase tracking-[0.2em] hover:scale-[1.05] active:scale-[0.98] transition-all">
+                Finalize Configuration
+              </Button>
             </div>
-          </motion.div>
-        </>
-      )}
+          </div>
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
 };

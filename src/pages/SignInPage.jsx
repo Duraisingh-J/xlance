@@ -66,18 +66,25 @@ const SignInPage = () => {
 
   return (
     <PageTransition>
-      <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <Card className="p-8">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <main className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden bg-gray-50">
+        {/* Background Decorative Elements */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary-200/20 rounded-full blur-[120px] -z-10 animate-pulse-slow" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-200/20 rounded-full blur-[120px] -z-10" />
+
+        <div className="w-full max-w-md relative z-10">
+          <Card variant="glass-light" className="p-10 shadow-2xl border-white/60">
+            <div className="text-center mb-10">
+              <div className="bg-primary-600 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary-500/30">
+                <Lock className="text-white" size={24} />
+              </div>
+              <h1 className="text-4xl font-black text-gray-900 mb-3 tracking-tighter">
                 Welcome Back
               </h1>
-              <p className="text-gray-600">Sign in to your account</p>
+              <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px]">Sign in to your talent or work hub</p>
             </div>
 
             {errors.submit && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
                 {errors.submit}
               </div>
             )}
@@ -87,55 +94,67 @@ const SignInPage = () => {
               type="button"
               onClick={handleGoogleSignIn}
               variant="outline"
-              className="w-full flex gap-3 mb-4"
+              className="w-full flex gap-3 mb-6 bg-white/60 border-white/80 h-14 rounded-2xl font-bold transition-all hover:bg-white hover:shadow-md"
             >
               <img src={GoogleIcon} className="w-5 h-5" />
               Continue with Google
             </Button>
 
-            <div className="flex items-center my-4">
-              <div className="flex-grow border-t" />
-              <span className="mx-4 text-sm text-gray-500">or</span>
-              <div className="flex-grow border-t" />
+            <div className="flex items-center my-8">
+              <div className="flex-grow border-t border-gray-200/50" />
+              <span className="mx-4 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">or login with email</span>
+              <div className="flex-grow border-t border-gray-200/50" />
             </div>
 
             {/* EMAIL SIGN IN */}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <Input
-                label="Email"
+                label="Email Address"
                 name="email"
                 type="email"
-                icon={<Mail size={20} />}
+                icon={<Mail size={20} className="text-primary-500" />}
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
                 error={errors.email}
+                className="bg-white/40 border-white/60 focus:bg-white transition-all h-14 rounded-2xl mt-1"
               />
 
-              <Input
-                label="Password"
-                name="password"
-                type="password"
-                icon={<Lock size={20} />}
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-              />
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Password</label>
+                  <Link to="/auth/forgot-password" size="sm" className="text-[10px] font-black text-primary-600 uppercase tracking-widest hover:text-primary-700">Forgot?</Link>
+                </div>
+                <Input
+                  name="password"
+                  type="password"
+                  icon={<Lock size={20} className="text-primary-500" />}
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  error={errors.password}
+                  className="bg-white/40 border-white/60 focus:bg-white transition-all h-14 rounded-2xl"
+                />
+              </div>
 
-              <Button isLoading={isLoading} type="submit" className="w-full mt-6">
-                Sign In
+              <Button
+                isLoading={isLoading}
+                type="submit"
+                variant="neon-primary"
+                className="w-full h-14 rounded-2xl mt-8 shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:scale-[1.02] transform transition-all"
+              >
+                Enter Dashboard
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-gray-600">
-                Don&apos;t have an account?{" "}
+            <div className="mt-10 text-center">
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-loose">
+                New to the platform?{" "}
                 <Link
                   to="/auth/signup"
-                  className="text-primary-600 hover:text-primary-700 font-medium"
+                  className="text-primary-600 hover:text-primary-700 font-black border-b-2 border-primary-600/20 hover:border-primary-600 transition-all ml-1"
                 >
-                  Sign Up
+                  Join the Hub
                 </Link>
               </p>
             </div>
@@ -144,6 +163,7 @@ const SignInPage = () => {
       </main>
     </PageTransition>
   );
+
 };
 
 export default SignInPage;

@@ -6,7 +6,7 @@
 
 @layer base {
   body {
-    @apply bg-gradient-to-br from-blue-50 via-white to-blue-50 min-h-screen text-gray-900 antialiased;
+    @apply bg-gray-50 min-h-screen text-gray-900 antialiased;
   }
 }
 
@@ -31,11 +31,21 @@
     color: transparent;
   }
 
-  .text-gradient span {
-    background: linear-gradient(to right, #0052cc, #003d99);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
+  .animate-pulse-slow {
+    animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.6;
+      transform: scale(1.1);
+    }
   }
 }

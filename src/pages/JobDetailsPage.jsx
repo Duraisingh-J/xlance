@@ -74,9 +74,9 @@ const JobDetailsPage = () => {
         <PageTransition>
             <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-3xl mx-auto space-y-6">
-                    <Card className="p-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-4">{job.title}</h1>
-                        <div className="flex justify-between items-center text-sm text-gray-500 mb-6">
+                    <Card className="p-4 md:p-8">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{job.title}</h1>
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center text-sm text-gray-500 mb-6 gap-2 sm:gap-0">
                             <span>Posted by {job.client?.name || "Client"}</span>
                             <span>{new Date(job.createdAt?.seconds * 1000).toLocaleDateString()}</span>
                         </div>
@@ -103,7 +103,7 @@ const JobDetailsPage = () => {
 
                     {/* Proposal Form - Only for Freelancers */}
                     {userProfile?.role?.includes('freelancer') && user.uid !== job.clientId && (
-                        <Card className="p-8">
+                        <Card className="p-4 md:p-8">
                             <h2 className="text-xl font-bold mb-4">Submit a Proposal</h2>
                             <form onSubmit={handleSubmitProposal} className="space-y-4">
                                 <Input

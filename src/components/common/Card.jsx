@@ -5,8 +5,10 @@ const Card = React.forwardRef(({ variant = 'glass', hover = true, className, chi
   const baseStyles = 'rounded-2xl transition-all duration-300';
 
   const variantStyles = {
-    glass: 'glass-effect',
-    solid: 'bg-white shadow-lg',
+    glass: 'bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass',
+    'glass-light': 'bg-white/40 backdrop-blur-2xl border border-white/50 shadow-glass',
+    'glass-dark': 'bg-black/60 backdrop-blur-2xl border border-white/10 text-white shadow-2xl',
+    solid: 'bg-white shadow-sm border border-gray-100',
     outline: 'border-2 border-gray-200 bg-white',
   };
 
