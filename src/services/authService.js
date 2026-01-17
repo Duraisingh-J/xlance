@@ -1,45 +1,57 @@
-// MOCK AUTH SERVICE
-// Replacing Firebase Auth with local simulation due to network issues
-
-const MOCK_USER = {
-    uid: "mock-user-123",
-    email: "demo@xlance.com",
-    displayName: "Demo User",
-    photoURL: null,
-    emailVerified: true
-};
+import { auth } from './firebaseConfig';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+    fetchSignInMethodsForEmail
+} from 'firebase/auth';
 
 export const authService = {
-    // Mock Sign up
+    // Sign up
     signup: async (email, password) => {
-        console.log("Mock Signup:", email);
-        localStorage.setItem("xlance_mock_session", "true");
-        return { user: { ...MOCK_USER, email } };
+        return createUserWithEmailAndPassword(auth, email, password);
     },
 
-    // Mock Login
+    // Login
     login: async (email, password) => {
-        console.log("Mock Login:", email);
-        if (password === "error") throw new Error("Invalid credentials");
-        localStorage.setItem("xlance_mock_session", "true");
-        return { user: { ...MOCK_USER, email } };
+        return signInWithEmailAndPassword(auth, email, password);
     },
 
-    // Mock Google Login
+    // Google Login
     loginWithGoogle: async () => {
-        console.log("Mock Google Login");
-        localStorage.setItem("xlance_mock_session", "true");
-        return { user: MOCK_USER };
+        const provider = new GoogleAuthProvider();
+        return signInWithPopup(auth, provider);
     },
 
-    // Mock Logout
+    // Logout
     logout: async () => {
-        console.log("Mock Logout");
-        localStorage.removeItem("xlance_mock_session");
+        return signOut(auth);
     },
 
-    // Helper to check session
+    // Get current user (synchronous helper not possible with Firebase v9+, handled by AuthContext via onAuthStateChanged)
+    // This is kept for compatibility but returns null if called directly. Context monitors state.
     getCurrentUser: () => {
-        return localStorage.getItem("xlance_mock_session") ? MOCK_USER : null;
+        return auth.currentUser;
+    },
+
+    // Observer for auth state changes
+    onAuthStateChanged: (callback) => {
+        return onAuthStateChanged(auth, callback);
+    },
+
+    // Check if email exists
+    checkEmailExists: async (email) => {
+        try {
+            const methods = await fetchSignInMethodsForEmail(auth, email);
+            return methods.length > 0;
+        } catch (error) {
+            // If email enumeration protection is on, we might get an error or empty array.
+            // We'll treat error as "unknown" (false) to let normal sign-up flow handle it.
+            console.warn("Email check skipped/failed:", error);
+            return false;
+        }
     }
 };

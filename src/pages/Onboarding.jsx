@@ -8,7 +8,7 @@ import { userService } from "../services/userService";
 import { Laptop, Users, Rocket, Target, Zap, ShieldCheck, Trophy, ArrowRight, User, Star } from 'lucide-react';
 
 const Onboarding = () => {
-  const { user, userProfile, setUserProfile } = useAuth();
+  const { user, userProfile, setUserProfile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const [roleChoice, setRoleChoice] = useState("");
@@ -292,7 +292,10 @@ const Onboarding = () => {
               <ShieldCheck size={14} className="text-emerald-500" /> Secure Protocol v2
             </p>
             <div className="flex gap-4">
-              <Button variant="ghost" className="px-8 h-14 rounded-2xl font-black uppercase tracking-widest text-gray-500" onClick={() => navigate(-1)}>
+              <Button variant="ghost" className="px-8 h-14 rounded-2xl font-black uppercase tracking-widest text-gray-500" onClick={async () => {
+                await signOut();
+                navigate("/auth/signup");
+              }}>
                 Abort
               </Button>
               <Button

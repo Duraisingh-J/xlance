@@ -5,7 +5,10 @@ import { LoadingSpinner } from '../components/common';
 import FreelancerDashboard from '../components/dashboard/FreelancerDashboard';
 import ClientDashboard from '../components/dashboard/ClientDashboard';
 
+import usePageTitle from "../hooks/usePageTitle";
+
 const DashboardPage = () => {
+  usePageTitle("Dashboard");
   const { role } = useParams();
   const { user, authLoading } = useAuth();
 

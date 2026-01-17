@@ -4,11 +4,13 @@ import { Menu, X, LogOut, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from './Button';
 import ProfileCompletionModal from './ProfileCompletionModal';
+import LogoutConfirmationModal from '../modals/LogoutConfirmationModal';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { user, userProfile, signOut } = useAuth();
   const location = useLocation();
 
@@ -39,9 +41,14 @@ const Navbar = () => {
   };
   const homeLinkClass = 'text-primary-600 hover:text-primary-700 transition-colors';
 
-  const handleSignOut = async () => {
+  const handleSignOutClick = () => {
+    setShowLogoutModal(true);
+    setIsOpen(false); // Close mobile menu if open
+  };
+
+  const confirmSignOut = async () => {
     await signOut();
-    setIsOpen(false);
+    setShowLogoutModal(false);
   };
 
   // 🛠️ HOOKS MUST BE CALLED BEFORE EARLY RETURNS 🛠️
@@ -101,7 +108,7 @@ const Navbar = () => {
                     <Link to={dashboardPath} className={homeLinkClass}>Dashboard</Link>
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-700">{userProfile?.name || user?.displayName || user?.email}</span>
-                      <button onClick={handleSignOut} className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Sign out">
+                      <button onClick={handleSignOutClick} className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Sign out">
                         <LogOut size={20} />
                       </button>
                     </div>
@@ -136,7 +143,7 @@ const Navbar = () => {
                     >
                       <img src={userProfile?.photoURL || user?.photoURL || '/src/assets/logo.png'} alt="avatar" className="w-full h-full object-cover" />
                     </button>
-                    <button onClick={handleSignOut} className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Sign out">
+                    <button onClick={handleSignOutClick} className="text-gray-600 hover:text-gray-900 transition-colors p-2 rounded-md hover:bg-white/10" title="Sign out">
                       <LogOut size={20} />
                     </button>
                   </div>
@@ -183,7 +190,7 @@ const Navbar = () => {
                 <Link to="/projects" onClick={() => setIsOpen(false)} className={getLinkClass('/projects') + ' block py-2'}>My Projects</Link>
                 <Link to="/messages" onClick={() => setIsOpen(false)} className={getLinkClass('/messages') + ' block py-2'}>Messages</Link>
                 <Link to="/reports" onClick={() => setIsOpen(false)} className={getLinkClass('/reports') + ' block py-2'}>Reports</Link>
-                <button onClick={handleSignOut} className="w-full text-left text-gray-600 hover:text-gray-900 py-2">Sign Out</button>
+                <button onClick={handleSignOutClick} className="w-full text-left text-gray-600 hover:text-gray-900 py-2">Sign Out</button>
               </>
             ) : (
               <div className="space-y-2">
@@ -200,6 +207,11 @@ const Navbar = () => {
       </div>
 
       <ProfileCompletionModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={confirmSignOut}
+      />
     </nav>
   );
 };

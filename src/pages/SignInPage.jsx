@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { Button, Card, Input } from "../components/common";
 import { validateEmail } from "../utils/helpers";
 import PageTransition from "../components/common/PageTransition";
+import usePageTitle from "../hooks/usePageTitle";
 
 const SignInPage = () => {
   const [formData, setFormData] = useState({
@@ -15,8 +16,16 @@ const SignInPage = () => {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const { signIn, signInWithGoogle } = useAuth();
+  usePageTitle("Sign In");
+  const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  React.useEffect(() => {
+    if (user) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,7 +81,22 @@ const SignInPage = () => {
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-200/20 rounded-full blur-[120px] -z-10" />
 
         <div className="w-full max-w-md relative z-10">
-          <Card variant="glass-light" className="p-10 shadow-2xl border-white/60">
+          <Card variant="glass-light" className="p-10 shadow-2xl border-white/60 relative group-card">
+
+            {/* Back to Home - Inside Card */}
+            <Link
+              to="/"
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100/50 transition-all duration-300 flex items-center gap-2 group overflow-hidden w-9 hover:w-32 bg-white/50 backdrop-blur-sm border border-white/60 shadow-sm"
+              title="Back to Home"
+            >
+              <div className="w-5 h-5 flex items-center justify-center flex-shrink-0 text-gray-500 group-hover:text-primary-600">
+                <span className="font-bold text-xs">X</span>
+              </div>
+              <span className="text-xs font-bold text-gray-600 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+                Back to Home
+              </span>
+            </Link>
+
             <div className="text-center mb-10">
               <div className="bg-primary-600 w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary-500/30">
                 <Lock className="text-white" size={24} />
