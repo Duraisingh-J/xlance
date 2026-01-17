@@ -105,8 +105,8 @@ const JobDetailsDrawer = ({ job, isOpen, onClose }) => {
                                     <span className="bg-primary-50 text-primary-700 px-2.5 py-0.5 rounded-full font-medium text-xs">
                                         {job.budgetType === 'fixed' ? 'Fixed Price' : 'Hourly'}
                                     </span>
-                                    <span>Posted {new Date(job.postedAt).toLocaleDateString()}</span>
-                                    <span className="flex items-center gap-1"><MapPin size={14} /> Remote</span>
+                                    <span>Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Just now'}</span>
+                                    <span className="flex items-center gap-1"><MapPin size={14} /> {job.client?.location || 'Remote'}</span>
                                 </div>
                             </div>
 
@@ -146,7 +146,7 @@ const JobDetailsDrawer = ({ job, isOpen, onClose }) => {
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-500 mb-1">Proposals</p>
-                                    <p className="font-bold text-gray-900 text-lg">Less than 5</p>
+                                    <p className="font-bold text-gray-900 text-lg">{job.proposalsCount ?? 0}</p>
                                 </div>
                             </div>
 

@@ -9,3 +9,4 @@ export { default as LoadingScreen } from './LoadingScreen';
 export { default as PageTransition } from './PageTransition';
 export { default as ScrollToTop } from './ScrollToTop';
 // LoadingScreen removed — use PageTransition + LoadingSpinner if needed
+export { default as LocationSaver } from "./LocationSaver";

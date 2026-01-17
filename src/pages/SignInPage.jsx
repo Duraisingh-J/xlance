@@ -27,7 +27,7 @@ const SignInPage = () => {
     if (user && userProfile && !isGoogleSigningIn.current) {
       if (userProfile.onboarded) {
         // If already onboarded, go to specific dashboard
-        const role = userProfile.role === "client" ? "client" : "freelancer";
+        const role = (Array.isArray(userProfile.role) && userProfile.role.includes("client")) || userProfile.role === "client" ? "client" : "freelancer";
         navigate(`/dashboard/${role}`, { replace: true });
       } else {
         navigate("/onboarding", { replace: true });

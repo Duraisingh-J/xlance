@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Button } from '../components/common';
-import { DownloadCloud, TrendingUp, TrendingDown, IndianRupee, Briefcase, CheckCircle, Star, Users, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { DownloadCloud, TrendingUp, TrendingDown, IndianRupee, Briefcase, CheckCircle, Star, Users, Calendar, Clock, AlertCircle, DollarSign, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
+// --- Freelancer Mock Data ---
 const mockSummary = {
   totalEarnings: 850230,
   earningsMonth: 45230,
@@ -46,6 +48,33 @@ const mockTransactions = Array.from({ length: 23 }).map((_, i) => ({
   amount: (Math.round(Math.random() * 50000) + 2000),
 }));
 
+// --- Client Mock Data ---
+const mockClientSummary = {
+  totalSpent: 1250000,
+  spentMonth: 85000,
+  activeJobs: 3,
+  hires: 12,
+  avgRating: 4.9,
+  trends: {
+    spent: 5.2,
+    activeJobs: 1,
+    hires: 2,
+    avgRating: 0.1
+  }
+};
+
+const mockClientSpendingSeries = Array.from({ length: 12 }).map((_, i) => ({
+  label: `M-${i + 1}`,
+  value: Math.round(Math.random() * 50000) + 10000,
+}));
+
+const mockClientCategories = [
+  { name: 'Development', value: 650000, icon: '💻', color: 'from-blue-500 to-blue-600' },
+  { name: 'Marketing', value: 300000, icon: '📢', color: 'from-purple-500 to-purple-600' },
+  { name: 'Design', value: 200000, icon: '🎨', color: 'from-pink-500 to-pink-600' },
+  { name: 'Writing', value: 100000, icon: '✍️', color: 'from-green-500 to-green-600' },
+];
+
 const currency = (v) => `₹${v.toLocaleString('en-IN')}`;
 
 const EnhancedStatCard = ({ title, value, subtitle, trend, icon: Icon, gradient }) => (
@@ -72,6 +101,23 @@ const EnhancedStatCard = ({ title, value, subtitle, trend, icon: Icon, gradient 
 );
 
 const Reports = () => {
+  const { userProfile } = useAuth();
+  // Robustly check for client role (handles string 'client' or array ['client'])
+  const isClient = useMemo(() => {
+    if (!userProfile?.role) return false;
+    if (Array.isArray(userProfile.role)) return userProfile.role.includes('client');
+    return userProfile.role === 'client';
+  }, [userProfile]);
+
+  // Select data based on role
+  const summary = isClient ? mockClientSummary : mockSummary;
+  const series = isClient ? mockClientSpendingSeries : mockEarningsSeries;
+  const categories = isClient ? mockClientCategories : mockCategories;
+
+  // Client-specific labels
+  const totalLabel = isClient ? "Total Spent" : "Total Earnings";
+  const monthLabel = isClient ? "Spent This Month" : "Earnings This Month";
+
   const [range, setRange] = useState('This month');
   const [projectType, setProjectType] = useState('All');
   const [page, setPage] = useState(1);
@@ -97,8 +143,12 @@ const Reports = () => {
     <main className="pt-28 pb-12 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <header className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics & Reports</h1>
-          <p className="text-sm text-gray-600 mt-1">Track your earnings, performance, and client insights.</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isClient ? "Financial Reports" : "Analytics & Reports"}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {isClient ? "Track your spending, project costs, and hiring trends." : "Track your earnings, performance, and client insights."}
+          </p>
         </header>
 
         {/* Filter bar */}
@@ -154,44 +204,44 @@ const Reports = () => {
             a.remove();
             URL.revokeObjectURL(url);
           }}>
-            <DownloadCloud size={16} /> Export CSV
+            <DownloadCloud size={16} /> {isClient ? "Export Spending CSV" : "Export Earnings CSV"}
           </Button>
         </div>
 
         {/* Enhanced Summary cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <EnhancedStatCard
-            title="Total Earnings"
-            value={currency(mockSummary.totalEarnings)}
-            trend={mockSummary.trends.earnings}
-            icon={IndianRupee}
-            gradient="from-green-500 to-emerald-600"
+            title={totalLabel}
+            value={currency(isClient ? summary.totalSpent : summary.totalEarnings)}
+            trend={isClient ? summary.trends.spent : summary.trends.earnings}
+            icon={isClient ? Wallet : IndianRupee}
+            gradient={isClient ? "from-purple-500 to-indigo-600" : "from-green-500 to-emerald-600"}
           />
           <EnhancedStatCard
-            title="This Month"
-            value={currency(mockSummary.earningsMonth)}
-            subtitle="Earnings"
+            title={isClient ? "Spent This Month" : "This Month"}
+            subtitle={isClient ? "Spending" : "Earnings"}
+            value={currency(isClient ? summary.spentMonth : summary.earningsMonth)}
             icon={TrendingUp}
             gradient="from-blue-500 to-blue-600"
           />
           <EnhancedStatCard
-            title="Active Contracts"
-            value={mockSummary.activeContracts}
-            trend={mockSummary.trends.contracts}
+            title={isClient ? "Active Jobs" : "Active Contracts"}
+            value={isClient ? summary.activeJobs : summary.activeContracts}
+            trend={isClient ? summary.trends.activeJobs : summary.trends.contracts}
             icon={Briefcase}
-            gradient="from-purple-500 to-purple-600"
+            gradient={isClient ? "from-pink-500 to-rose-600" : "from-purple-500 to-purple-600"}
           />
           <EnhancedStatCard
-            title="Completed"
-            value={mockSummary.completed}
-            trend={mockSummary.trends.completed}
-            icon={CheckCircle}
-            gradient="from-orange-500 to-orange-600"
+            title={isClient ? "Total Hires" : "Completed"}
+            value={isClient ? summary.hires : summary.completed}
+            trend={isClient ? summary.trends.hires : summary.trends.completed}
+            icon={isClient ? Users : CheckCircle}
+            gradient={isClient ? "from-emerald-500 to-teal-600" : "from-orange-500 to-orange-600"}
           />
           <EnhancedStatCard
-            title="Overall Rating"
-            value={`${mockSummary.rating} ★`}
-            trend={mockSummary.trends.rating}
+            title={isClient ? "Avg. Given Rating" : "Overall Rating"}
+            value={`${isClient ? summary.avgRating : summary.rating} ★`}
+            trend={isClient ? summary.trends.avgRating : summary.trends.rating}
             icon={Star}
             gradient="from-yellow-400 to-yellow-500"
           />
@@ -203,7 +253,7 @@ const Reports = () => {
           <div className="lg:col-span-2 space-y-6">
             <Card hover={false} className="p-6 shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">Earnings Over Time</h3>
+                <h3 className="text-lg font-bold text-gray-900">{isClient ? "Spending Over Time" : "Earnings Over Time"}</h3>
                 <div className="text-sm text-gray-500 bg-gray-50 px-3 py-1 rounded-full">{range}</div>
               </div>
 
@@ -218,7 +268,7 @@ const Reports = () => {
                   </defs>
                   <polygon
                     fill="url(#areaGradient)"
-                    points={`0,40 ${mockEarningsSeries.map((s, i) => `${(i / (mockEarningsSeries.length - 1)) * 100},${40 - (s.value / 60000) * 40}`).join(' ')} 100,40`}
+                    points={`0,40 ${series.map((s, i) => `${(i / (series.length - 1)) * 100},${40 - (s.value / (isClient ? 70000 : 30000)) * 40}`).join(' ')} 100,40`}
                   />
                   <polyline
                     fill="none"
@@ -226,16 +276,16 @@ const Reports = () => {
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    points={mockEarningsSeries.map((s, i) => `${(i / (mockEarningsSeries.length - 1)) * 100},${40 - (s.value / 60000) * 40}`).join(' ')}
+                    points={series.map((s, i) => `${(i / (series.length - 1)) * 100},${40 - (s.value / (isClient ? 70000 : 30000)) * 40}`).join(' ')}
                   />
                 </svg>
               </div>
 
               <div className="mt-8">
-                <h4 className="text-sm font-bold mb-4 text-gray-900">Earnings by Category</h4>
+                <h4 className="text-sm font-bold mb-4 text-gray-900">{isClient ? "Spending by Category" : "Earnings by Category"}</h4>
                 <div className="space-y-4">
-                  {mockCategories.map((c) => {
-                    const pct = Math.round((c.value / mockCategories.reduce((a, b) => a + b.value, 0)) * 100);
+                  {categories.map((c) => {
+                    const pct = Math.round((c.value / categories.reduce((a, b) => a + b.value, 0)) * 100);
                     return (
                       <div key={c.name} className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-lg">{c.icon}</div>
@@ -255,7 +305,7 @@ const Reports = () => {
             {/* Enhanced Transactions table */}
             <Card hover={false} className="p-0 overflow-hidden shadow-md border border-gray-100">
               <div className="p-6 border-b bg-gradient-to-r from-gray-50 to-white flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900">Transactions & Payouts</h3>
+                <h3 className="text-lg font-bold text-gray-900">Transactions & {isClient ? "Invoices" : "Payouts"}</h3>
                 <div className="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border border-gray-200">{mockTransactions.length} items</div>
               </div>
 
@@ -265,7 +315,7 @@ const Reports = () => {
                     <tr>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Project</th>
-                      <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">{isClient ? "Freelancer" : "Client"}</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">Amount</th>
@@ -305,15 +355,20 @@ const Reports = () => {
             <Card hover={false} className="p-6 shadow-md border border-gray-100">
               <h3 className="text-lg font-bold mb-6 text-gray-900 flex items-center gap-2">
                 <Star className="text-yellow-500" size={20} />
-                Performance
+                {isClient ? "Hiring Metrics" : "Performance"}
               </h3>
               <div className="space-y-5">
-                {[
+                {(isClient ? [
+                  { label: 'Satisfaction Score', value: 95, color: 'bg-green-500' },
+                  { label: 'Hire Rate', value: 78, color: 'bg-blue-500' },
+                  { label: 'Repeat Hires', value: 45, color: 'bg-purple-500' },
+                  { label: 'On-Budget', value: 88, color: 'bg-emerald-500' }
+                ] : [
                   { label: 'Rating trend', value: 80, color: 'bg-primary-500' },
                   { label: 'On-time delivery', value: 92, color: 'bg-green-500' },
                   { label: 'Revision rate', value: 18, color: 'bg-yellow-400' },
                   { label: 'Dispute rate', value: 6, color: 'bg-red-500' }
-                ].map((metric) => (
+                ]).map((metric) => (
                   <div key={metric.label}>
                     <div className="flex items-center justify-between text-sm font-medium text-gray-700 mb-2">
                       <span>{metric.label}</span>
@@ -330,7 +385,7 @@ const Reports = () => {
             <Card hover={false} className="p-6 shadow-md border border-gray-100">
               <h3 className="text-lg font-bold mb-6 text-gray-900 flex items-center gap-2">
                 <Users className="text-blue-500" size={20} />
-                Top Clients
+                {isClient ? "Top Freelancers" : "Top Clients"}
               </h3>
               <div className="space-y-4">
                 {mockClients.map((c) => (

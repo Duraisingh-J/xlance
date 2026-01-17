@@ -8,17 +8,14 @@ export function JobsProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const data = await jobService.getOpenJobs();
-        setJobs(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Failed to fetch jobs:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchJobs();
+    // Real-time subscription
+    const unsubscribe = jobService.subscribeToOpenJobs((data) => {
+      setJobs(Array.isArray(data) ? data : []);
+      setLoading(false);
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, []);
 
   const [filters, setFilters] = useState({

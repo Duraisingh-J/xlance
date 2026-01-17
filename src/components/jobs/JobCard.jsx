@@ -63,7 +63,7 @@ const JobCard = ({ job, onClick }) => {
                         <span>•</span>
                         <span>Est. Time: {job.duration}</span>
                         <span>•</span>
-                        <span>Posted {timeAgo(job.postedAt)}</span>
+                        <span>Posted {job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Just now'}</span>
                     </div>
                 </div>
 
@@ -109,10 +109,17 @@ const JobCard = ({ job, onClick }) => {
                         </div>
 
                         <div className="flex items-center gap-1">
-                            <div className="text-amber-500 flex">
-                                {'★'.repeat(Math.round(job.client.rating))}
-                            </div>
-                            <span className="font-medium text-gray-900">{job.client.rating}</span>
+                            {job.client.rating > 0 && (
+                                <>
+                                    <div className="text-amber-500 flex">
+                                        {'★'.repeat(Math.round(job.client.rating))}
+                                    </div>
+                                    <span className="font-medium text-gray-900">{job.client.rating}</span>
+                                </>
+                            )}
+                            {(!job.client.rating || job.client.rating === 0) && (
+                                <span className="text-gray-400 text-xs">No reviews</span>
+                            )}
                         </div>
                     </div>
 

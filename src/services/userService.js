@@ -1,5 +1,5 @@
 import { db } from './firebaseConfig';
-import { doc, setDoc, getDoc, updateDoc, arrayUnion, increment } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, arrayUnion, increment, runTransaction, collection, query, orderBy, getDocs } from 'firebase/firestore';
 
 export const userService = {
     // Create User Profile
@@ -10,7 +10,7 @@ export const userService = {
             // Default initial profile structure
             const newProfile = {
                 name: data.name || '',
-                email: data.email,
+                email: data.email || "",// place the Gamil id here
                 role: data.role || [],
                 skills: [],
                 bio: "",
@@ -59,12 +59,13 @@ export const userService = {
         }
     },
 
-    // Update User Profile
+    // Update User Profile with Custom ID Generation
     updateUserProfile: async (uid, data) => {
         try {
+            console.log("Starting updateUserProfile transaction for:", uid);
             const userRef = doc(db, 'users', uid);
 
-            // Handle the 'onboarded' flag synchronization
+            // Prepare base update data
             const updateData = {
                 ...data,
                 updatedAt: new Date().toISOString()
@@ -73,13 +74,120 @@ export const userService = {
             if (data.onboarded || data.onboardingCompleted) {
                 updateData.onboarded = true;
                 updateData.onboardingCompleted = true;
+
+                // 🔥 TRANSACTION: Generate ID and Write to Directory
+                await runTransaction(db, async (transaction) => {
+                    console.log("Inside transaction...");
+
+                    // 1. Read Global Counter (Path: users -> directory -> counters -> main)
+                    const counterRef = doc(db, 'users', 'directory', 'counters', 'main');
+                    const counterSnap = await transaction.get(counterRef);
+
+                    let counts = counterSnap.exists() ? counterSnap.data() : { freelancerCount: 0, clientCount: 0 };
+                    let didUpdateCounters = false;
+
+                    // 2. Handle Roles & ID Generation
+                    // Handle case where role might be wrapped or just a string
+                    const rawRoles = data.role || [];
+                    const roles = Array.isArray(rawRoles) ? rawRoles : [rawRoles];
+
+                    console.log("Roles detected:", roles);
+
+                    // --- FREELANCER HANDLING ---
+                    if (roles.includes('freelancer')) {
+                        const newCount = (counts.freelancerCount || 0) + 1;
+                        const newId = `F-${String(newCount).padStart(3, '0')}`;
+                        console.log("Generated Freelancer ID:", newId);
+
+                        updateData.freelancerId = newId;
+                        counts.freelancerCount = newCount;
+                        didUpdateCounters = true;
+
+                        // Create Directory Entry: users/directory/freelancers/{F-ID}
+                        const dirRef = doc(db, 'users', 'directory', 'freelancers', newId);
+
+                        // Sanitize payload to avoid undefined values
+                        const profilePayload = {
+                            uid: uid,
+                            publicProfile: true,
+                            name: data.name || "",
+                            email: data.email || "",
+                            role: roles,
+                            createdAt: new Date().toISOString(),
+                            ...updateData
+                        };
+
+                        // Ensure specific profile data is present
+                        if (data.freelancerProfile) {
+                            profilePayload.freelancerProfile = data.freelancerProfile;
+                        }
+
+                        transaction.set(dirRef, profilePayload);
+                    }
+
+                    // --- CLIENT HANDLING ---
+                    if (roles.includes('client')) {
+                        const newCount = (counts.clientCount || 0) + 1;
+                        const newId = `C-${String(newCount).padStart(3, '0')}`;
+                        console.log("Generated Client ID:", newId);
+
+                        updateData.clientId = newId;
+                        counts.clientCount = newCount;
+                        didUpdateCounters = true;
+
+                        // Create Directory Entry: users/directory/clients/{C-ID}
+                        const dirRef = doc(db, 'users', 'directory', 'clients', newId);
+
+                        const profilePayload = {
+                            uid: uid,
+                            publicProfile: true,
+                            name: data.name || "",
+                            email: data.email || "",
+                            role: roles,
+                            createdAt: new Date().toISOString(),
+                            ...updateData
+                        };
+
+                        if (data.clientProfile) {
+                            profilePayload.clientProfile = data.clientProfile;
+                        }
+
+                        transaction.set(dirRef, profilePayload);
+                    }
+
+                    // 3. Commit Writes
+                    if (didUpdateCounters) {
+                        transaction.set(counterRef, counts); // Create or Update counters
+                    }
+
+                    // 🔥 OPTIMIZATION: Only save POINTERS to the main "Random ID" doc
+                    // We do not save the full heavy profile here anymore.
+                    const pointerData = {
+                        onboarded: true,
+                        onboardingCompleted: true,
+                        role: roles,
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    if (updateData.freelancerId) pointerData.freelancerId = updateData.freelancerId;
+                    if (updateData.clientId) pointerData.clientId = updateData.clientId;
+
+                    transaction.update(userRef, pointerData);
+                });
+
+                console.log("Transaction committed successfully.");
+
+                // Return the updated data (fetching again is safest to get what transaction wrote)
+                const finalSnap = await getDoc(userRef);
+                return finalSnap.data();
+
+            } else {
+                // Standard non-onboarding update (no ID gen needed)
+                await updateDoc(userRef, updateData);
+                const updatedSnap = await getDoc(userRef);
+                return updatedSnap.data();
             }
 
-            await updateDoc(userRef, updateData);
-
-            // Return updated profile for local state
-            const updatedSnap = await getDoc(userRef);
-            return updatedSnap.data();
         } catch (error) {
             console.error("Error updating user profile:", error);
             throw error;
@@ -176,5 +284,23 @@ export const userService = {
         if (jobBudget < 25000) return 4;
         if (jobBudget < 100000) return 6;
         return 8;
+    },
+
+    // Get All Freelancers (for Client Search)
+    getFreelancers: async () => {
+        try {
+            const freelancersRef = collection(db, 'users', 'directory', 'freelancers');
+            // Basic query - in real app would have pagination/limits
+            const q = query(freelancersRef, orderBy('createdAt', 'desc'));
+            const querySnapshot = await getDocs(q);
+
+            return querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+        } catch (error) {
+            console.error("Error fetching freelancers:", error);
+            return [];
+        }
     }
 };

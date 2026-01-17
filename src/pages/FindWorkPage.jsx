@@ -6,13 +6,11 @@ import PageTransition from '../components/common/PageTransition';
 import JobCard from '../components/jobs/JobCard';
 import JobFilterSidebar from '../components/jobs/JobFilterSidebar';
 import JobSearchHeader from '../components/jobs/JobSearchHeader';
-import { mockJobs } from '../utils/mockData'; // Direct import for mock mode demo
 
 import JobDetailsDrawer from '../components/jobs/JobDetailsDrawer';
 
 export default function FindWorkPage() {
-  // In a real app, useJobs() would fetch this. For this redesign demo, we use enriched mock data directly.
-  const [jobs, setJobs] = useState(mockJobs);
+  const { jobs, loading } = useJobs();
   const [selectedJob, setSelectedJob] = useState(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 

@@ -10,6 +10,7 @@ import { JobsProvider } from "./context/JobsContext";
 import { Navbar, Footer, ScrollToTop } from "./components/common";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+
 import HomePage from "./pages/HomePage";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
@@ -22,9 +23,14 @@ import MyProjects from "./pages/MyProjects";
 import Messages from "./pages/Messages";
 import PostJobPage from "./pages/PostJobPage";
 import CreateProfilePage from "./pages/CreateProfilePage";
+import ClientJobsPage from "./pages/ClientJobsPage";
+import ClientTalentPage from "./pages/ClientTalentPage";
 
 function AppLayout() {
-  const { authLoading, error } = useAuth();
+  const { authLoading, error, user } = useAuth(); // Get user
+
+
+
 
   if (authLoading) {
     return (
@@ -40,6 +46,7 @@ function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
+
 
       {error && (
         <div className="bg-red-500 text-white px-4 py-2 text-center text-sm font-medium z-[100]">
@@ -132,6 +139,33 @@ function AppLayout() {
             element={
               <ProtectedRoute>
                 <CreateProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile/create"
+            element={
+              <ProtectedRoute>
+                <CreateProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/client/jobs"
+            element={
+              <ProtectedRoute>
+                <ClientJobsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/client/talent"
+            element={
+              <ProtectedRoute>
+                <ClientTalentPage />
               </ProtectedRoute>
             }
           />

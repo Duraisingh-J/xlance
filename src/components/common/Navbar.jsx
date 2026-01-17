@@ -19,13 +19,22 @@ const Navbar = () => {
   const isHome = location?.pathname === '/';
   const pathname = location?.pathname || '';
 
+  // Robust role check helper
+  const hasRole = (role) => {
+    if (!userProfile?.role) return false;
+    if (Array.isArray(userProfile.role)) {
+      return userProfile.role.includes(role);
+    }
+    return userProfile.role === role;
+  };
+
   // Determine dashboard path based on role
-  const dashboardPath = userProfile?.role && Array.isArray(userProfile.role) && userProfile.role.includes('freelancer')
+  const dashboardPath = hasRole('freelancer')
     ? '/dashboard/freelancer'
     : '/dashboard/client';
 
   // Known nav paths (used to decide default active)
-  const navPaths = ['/', dashboardPath, '/find-work', '/projects', '/messages', '/reports'];
+  const navPaths = ['/', dashboardPath, '/find-work', '/projects', '/messages', '/reports', '/client/jobs', '/client/talent'];
 
   // If none of the nav paths match current pathname, we'll default to highlighting the dashboard
   const activeFound = navPaths.some((p) => pathname.startsWith(p));
@@ -122,12 +131,21 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
-                  <Link to="/" className={getLinkClass('/')}>Home</Link>
-                )}
+                {/* Dynamic Navigation Based on Role */}
                 <Link to={dashboardPath} className={getLinkClass(dashboardPath)}>Dashboard</Link>
-                <Link to="/find-work" className={getLinkClass('/find-work')}>Find Work</Link>
-                <Link to="/projects" className={getLinkClass('/projects')}>My Projects</Link>
+
+                {hasRole('client') ? (
+                  <>
+                    <Link to="/client/jobs" className={getLinkClass('/client/jobs')}>My Jobs</Link>
+                    <Link to="/client/talent" className={getLinkClass('/client/talent')}>Find Talent</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/find-work" className={getLinkClass('/find-work')}>Find Work</Link>
+                    <Link to="/projects" className={getLinkClass('/projects')}>My Projects</Link>
+                  </>
+                )}
+
                 <Link to="/messages" className={getLinkClass('/messages')}>Messages</Link>
                 <Link to="/reports" className={getLinkClass('/reports')}>Reports</Link>
 
@@ -167,7 +185,7 @@ const Navbar = () => {
         </div>
         {isOpen && (
           <div className="md:hidden mt-2 bg-white/30 backdrop-blur-2xl rounded-xl border border-white/30 p-4 space-y-3 shadow-[0_8px_32px_0_rgba(31,38,135,0.15)]">
-            {!(userProfile?.role && userProfile.role.includes('freelancer')) && (
+            {!(hasRole('freelancer')) && (
               <Link to="/" onClick={() => setIsOpen(false)} className={(isHome ? homeLinkClass : getLinkClass('/')) + ' block py-2'}>Home</Link>
             )}
             {user ? (
@@ -186,8 +204,19 @@ const Navbar = () => {
                 </button>
                 <div className="border-t border-white/30 my-2" />
                 <Link to={dashboardPath} onClick={() => setIsOpen(false)} className={getLinkClass(dashboardPath) + ' block py-2'}>Dashboard</Link>
-                <Link to="/find-work" onClick={() => setIsOpen(false)} className={getLinkClass('/find-work') + ' block py-2'}>Find Work</Link>
-                <Link to="/projects" onClick={() => setIsOpen(false)} className={getLinkClass('/projects') + ' block py-2'}>My Projects</Link>
+
+                {hasRole('client') ? (
+                  <>
+                    <Link to="/client/jobs" onClick={() => setIsOpen(false)} className={getLinkClass('/client/jobs') + ' block py-2'}>My Jobs</Link>
+                    <Link to="/client/talent" onClick={() => setIsOpen(false)} className={getLinkClass('/client/talent') + ' block py-2'}>Find Talent</Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/find-work" onClick={() => setIsOpen(false)} className={getLinkClass('/find-work') + ' block py-2'}>Find Work</Link>
+                    <Link to="/projects" onClick={() => setIsOpen(false)} className={getLinkClass('/projects') + ' block py-2'}>My Projects</Link>
+                  </>
+                )}
+
                 <Link to="/messages" onClick={() => setIsOpen(false)} className={getLinkClass('/messages') + ' block py-2'}>Messages</Link>
                 <Link to="/reports" onClick={() => setIsOpen(false)} className={getLinkClass('/reports') + ' block py-2'}>Reports</Link>
                 <button onClick={handleSignOutClick} className="w-full text-left text-gray-600 hover:text-gray-900 py-2">Sign Out</button>

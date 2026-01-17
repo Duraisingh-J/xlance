@@ -90,10 +90,10 @@ const Onboarding = () => {
         ...payload,
       }));
 
-      // 🔥 UPDATE SERVICE (MOCK)
-      userService.updateUserProfile(user.uid, payload).catch((err) => console.error(err));
+      // 🔥 UPDATE SERVICE (MUST AWAIT!)
+      await userService.updateUserProfile(user.uid, payload);
 
-      // 🔥 NAVIGATE IMMEDIATELY
+      // 🔥 NAVIGATE AFTER SUCCESS
       if (rolesArr.length === 1 && rolesArr[0] === "client") {
         navigate("/dashboard/client", { replace: true });
       } else {
