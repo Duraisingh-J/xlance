@@ -17,7 +17,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import PageTransition from '../components/common/PageTransition';
-import { mockProjects } from '../utils/mockData';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { projectService } from '../services/projectService';
+import { messageService } from '../services/messageService';
 
 // --- Sub-Components (Internal for unique page design) ---
 
@@ -216,7 +219,7 @@ const StatusFilterBar = ({ activeStatus, onFilterChange, counts }) => {
   );
 };
 
-const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction }) => {
+const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction, onMessageClick }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -329,7 +332,7 @@ const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction }) => {
 
       {/* Actions Footer */}
       <div className="flex gap-2 border-t border-gray-100 pt-4">
-        <button className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:border-primary-200 hover:text-primary-600 hover:shadow-sm transition-all">
+        <button onClick={() => onMessageClick && onMessageClick(project)} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:border-primary-200 hover:text-primary-600 hover:shadow-sm transition-all">
           <MessageSquare size={16} /> Chat
         </button>
         <button onClick={() => onDetailsClick(project)} className="flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-primary-600 shdaow-sm transition-all">
@@ -344,13 +347,38 @@ const ProjectMissionCard = ({ project, onDetailsClick, onMenuAction }) => {
 // --- Main Page Component ---
 
 const MyProjects = () => {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('All');
-  const [projects, setProjects] = useState(mockProjects);
+  const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Modal States
   const [activeModal, setActiveModal] = useState(null); // 'contract' | 'upload'
   const [modalData, setModalData] = useState(null);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (user?.uid) {
+        try {
+          const data = await projectService.getProjectsByFreelancer(user.uid);
+          // If no projects found, seed a demo project for better initial experience
+          if (data.length === 0) {
+            const newId = await projectService.seedDemoProject(user.uid);
+            const seeded = await projectService.getProjectsByFreelancer(user.uid);
+            setProjects(seeded);
+          } else {
+            setProjects(data);
+          }
+        } catch (error) {
+          console.error("Error fetching projects:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    fetchProjects();
+  }, [user]);
 
   // Derived Logic: Recalculate counts based on dynamic state
   const counts = useMemo(() => {
@@ -367,38 +395,27 @@ const MyProjects = () => {
   // --- Actions Handlers ---
 
   // 1. Toggle Milestone: Updates Progress & Budget
-  const handleToggleMilestone = (projectId, milestoneId) => {
+  const handleToggleMilestone = async (projectId, milestoneId) => {
+    // Optimistic Update
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const updatedMilestones = project.milestones.map(m =>
+      m.id === milestoneId ? { ...m, completed: !m.completed } : m
+    );
+
+    // Recalculate Progress
+    const completedCount = updatedMilestones.filter(m => m.completed).length;
+    const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
+    const newBudgetConsumed = Math.round((newProgress / 100) * project.budgetTotal);
+
+    let newStatus = project.status;
+    if (newProgress === 100) newStatus = 'Completed';
+    else if (newProgress > 0 && project.status === 'open') newStatus = 'Active';
+
+    // Update State
     setProjects(prev => prev.map(p => {
       if (p.id !== projectId) return p;
-
-      const updatedMilestones = p.milestones.map(m =>
-        m.id === milestoneId ? { ...m, completed: !m.completed } : m
-      );
-
-      // Recalculate Progress
-      const completedCount = updatedMilestones.filter(m => m.completed).length;
-      const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
-
-      // Recalculate Budget (Simple logic: Progress % of Total Budget)
-      // In a real app, each milestone would have a specific value.
-      const newBudgetConsumed = Math.round((newProgress / 100) * p.budgetTotal);
-
-      // Update Status automatically based on progress
-      let newStatus = p.status;
-      if (newProgress === 100) newStatus = 'Completed';
-      else if (newProgress > 0 && p.status === 'open') newStatus = 'Active';
-
-      // If currently selected, update it too so the drawer reflects changes instantly
-      if (selectedProject && selectedProject.id === projectId) {
-        setSelectedProject(prevSelected => ({
-          ...prevSelected,
-          milestones: updatedMilestones,
-          progress: newProgress,
-          budgetConsumed: newBudgetConsumed,
-          status: newStatus
-        }));
-      }
-
       return {
         ...p,
         milestones: updatedMilestones,
@@ -407,26 +424,60 @@ const MyProjects = () => {
         status: newStatus
       };
     }));
+
+    if (selectedProject && selectedProject.id === projectId) {
+      setSelectedProject(prevSelected => ({
+        ...prevSelected,
+        milestones: updatedMilestones,
+        progress: newProgress,
+        budgetConsumed: newBudgetConsumed,
+        status: newStatus
+      }));
+    }
+
+    // Persist to FireStore
+    try {
+      await projectService.updateProject(projectId, {
+        milestones: updatedMilestones,
+        progress: newProgress,
+        budgetConsumed: newBudgetConsumed,
+        status: newStatus
+      });
+    } catch (err) {
+      console.error("Failed to update project", err);
+      // Revert state if needed (skipped for brevity)
+    }
   };
 
   // 2. Add New Milestone
-  const handleAddMilestone = (projectId, title) => {
+  const handleAddMilestone = async (projectId, title) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const newMilestone = { id: Date.now(), title, completed: false };
+    const updatedMilestones = [...(project.milestones || []), newMilestone];
+
+    const completedCount = updatedMilestones.filter(m => m.completed).length;
+    const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
+
+    const updateData = { milestones: updatedMilestones, progress: newProgress };
+
+    // Optimistic
     setProjects(prev => prev.map(p => {
       if (p.id !== projectId) return p;
-      const newMilestone = { id: Date.now(), title, completed: false };
-
-      const updatedMilestones = [...(p.milestones || []), newMilestone];
-
-      // Recalculate Progress (usually drops since total increases)
-      const completedCount = updatedMilestones.filter(m => m.completed).length;
-      const newProgress = Math.round((completedCount / updatedMilestones.length) * 100);
-
-      if (selectedProject && selectedProject.id === projectId) {
-        setSelectedProject(prev => ({ ...prev, milestones: updatedMilestones, progress: newProgress }));
-      }
-
-      return { ...p, milestones: updatedMilestones, progress: newProgress };
+      return { ...p, ...updateData };
     }));
+
+    if (selectedProject && selectedProject.id === projectId) {
+      setSelectedProject(prev => ({ ...prev, ...updateData }));
+    }
+
+    // Persist
+    try {
+      await projectService.updateProject(projectId, updateData);
+    } catch (err) {
+      console.error("Failed to add milestone", err);
+    }
   };
 
   // 3. Status Action Handler (from Dropdown)
@@ -452,30 +503,52 @@ const MyProjects = () => {
           {/* Projects Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             <AnimatePresence mode='popLayout'>
-              {filteredProjects.map((project) => (
-                <ProjectMissionCard
-                  key={project.id}
-                  project={project}
-                  onDetailsClick={setSelectedProject}
-                  onMenuAction={handleMenuAction} // Pass action handler
-                />
-              ))}
-            </AnimatePresence>
+              {loading ? (
+                // Loading Skeletons
+                [1, 2, 3].map(i => (
+                  <div key={i} className="rounded-2xl p-6 bg-white border border-gray-100 h-[400px] animate-pulse relative">
+                    <div className="flex gap-3 mb-6">
+                      <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-200 rounded-full mb-6"></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="h-16 bg-gray-200 rounded-xl"></div>
+                      <div className="h-16 bg-gray-200 rounded-xl"></div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  {filteredProjects.map((project) => (
+                    <ProjectMissionCard
+                      key={project.id}
+                      project={project}
+                      onDetailsClick={setSelectedProject}
+                      onMenuAction={handleMenuAction}
+                    />
+                  ))}
 
-            {/* Add New Project Placeholder */}
-            {filter !== 'Completed' && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary-300 hover:bg-primary-50/50 transition-all cursor-pointer min-h-[400px] group"
-              >
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400 group-hover:text-primary-500 transition-colors">
-                  <span className="text-3xl font-light">+</span>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">New Project</h3>
-                <p className="text-sm text-gray-500 mt-2 max-w-[200px]">Start a new contract or import a mission.</p>
-              </motion.div>
-            )}
+                  {/* Add New Project Placeholder */}
+                  {filter !== 'Completed' && !loading && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="border-2 border-dashed border-gray-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary-300 hover:bg-primary-50/50 transition-all cursor-pointer min-h-[400px] group"
+                    >
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400 group-hover:text-primary-500 transition-colors">
+                        <span className="text-3xl font-light">+</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">New Project</h3>
+                      <p className="text-sm text-gray-500 mt-2 max-w-[200px]">Start a new contract or import a mission.</p>
+                    </motion.div>
+                  )}
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

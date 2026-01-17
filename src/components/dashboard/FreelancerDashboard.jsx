@@ -116,27 +116,41 @@ const FreelancerDashboard = () => {
     else setGreeting("Good Evening");
   }, []);
 
-  // Smart Matcher: Recommendations based on user skills
-  const recommendedJobs = useMemo(() => {
-    try {
-      const allJobs = Array.isArray(mockJobs) ? mockJobs : [];
-      const userSkillsArray = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
+  const [recommendedJobs, setRecommendedJobs] = useState([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
 
-      if (userSkillsArray.length === 0) return allJobs.slice(0, 3);
+  useEffect(() => {
+    const fetchJobs = async () => {
+      setJobsLoading(true);
+      try {
+        const allJobs = await jobService.getOpenJobs();
+        const userSkillsArray = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
 
-      const userSkills = userSkillsArray.map(s => String(s).toLowerCase());
+        if (userSkillsArray.length === 0) {
+          setRecommendedJobs(allJobs.slice(0, 3));
+          return;
+        }
 
-      return allJobs
-        .map(job => {
+        const userSkills = userSkillsArray.map(s => String(s).toLowerCase());
+
+        const matched = allJobs.map(job => {
           const jobSkills = Array.isArray(job.skills) ? job.skills : [];
-          const matches = jobSkills.filter(skill => userSkills.includes(String(skill).toLowerCase()));
-          return { ...job, matchScore: matches.length };
+          const matchCount = jobSkills.filter(skill => userSkills.includes(String(skill).toLowerCase())).length;
+          return { ...job, matchScore: matchCount };
         })
-        .sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0))
-        .slice(0, 3);
-    } catch (err) {
-      console.error("Error in Smart Matcher:", err);
-      return [];
+          .sort((a, b) => b.matchScore - a.matchScore)
+          .slice(0, 3);
+
+        setRecommendedJobs(matched);
+      } catch (error) {
+        console.error("Error fetching recommended jobs:", error);
+      } finally {
+        setJobsLoading(false);
+      }
+    };
+
+    if (userProfile) {
+      fetchJobs();
     }
   }, [userProfile]);
 
@@ -381,39 +395,82 @@ const FreelancerDashboard = () => {
                   </h2>
                   <Link to="/find-work" className="text-sm font-semibold text-primary-600 hover:text-primary-700">View all matches</Link>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {recommendedJobs.map((job) => (
-                    <Card key={job.id} variant="glass-light" hover={true} className="p-6 flex flex-col justify-between h-full">
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <span className="px-2.5 py-1 bg-primary-500/10 text-primary-700 text-[10px] font-black uppercase rounded-lg tracking-[0.1em] border border-primary-500/10">
-                            Smart Match
-                          </span>
-                          <span className="text-sm font-black text-gray-900 tracking-tight">
-                            {job.budgetType === 'hourly' && job.budget?.min !== undefined
-                              ? `₹${job.budget.min.toLocaleString()}-${job.budget.max.toLocaleString()}/hr`
-                              : job.budget?.fixed !== undefined
-                                ? `₹${job.budget.fixed.toLocaleString()}`
-                                : job.budget !== undefined && typeof job.budget === 'number'
-                                  ? `₹${job.budget.toLocaleString()}`
-                                  : 'Budget N/A'}
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-gray-900 mb-3 text-lg leading-tight">{job.title}</h3>
-                        <div className="flex flex-wrap gap-2 mb-6">
-                          {(Array.isArray(job.skills) ? job.skills : []).slice(0, 3).map(skill => (
-                            <span key={skill} className="text-[10px] bg-white/40 text-gray-600 px-2.5 py-1 rounded-full font-bold border border-white/60">
-                              {skill}
-                            </span>
-                          ))}
+
+                {jobsLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[1, 2].map(i => (
+                      <div key={i} className="h-64 rounded-2xl bg-white border border-gray-100 p-6 animate-pulse">
+                        <div className="h-6 w-24 bg-gray-200 rounded-lg mb-4"></div>
+                        <div className="h-8 w-3/4 bg-gray-200 rounded-lg mb-4"></div>
+                        <div className="flex gap-2">
+                          <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
+                          <div className="h-6 w-16 bg-gray-200 rounded-full"></div>
                         </div>
                       </div>
-                      <Link to={`/jobs/${job.id}`}>
-                        <Button variant="outline" size="sm" className="w-full text-xs h-10 rounded-xl border-gray-200 bg-white/40 text-gray-900 hover:bg-primary-500 hover:text-white hover:border-primary-500 transition-all font-bold shadow-sm">View & Apply</Button>
-                      </Link>
-                    </Card>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : recommendedJobs.length === 0 ? (
+                  <div className="p-8 bg-white border border-gray-100 rounded-2xl text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Search size={24} className="text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">No jobs available</h3>
+                    <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">There are currently no open jobs in the marketplace. Check back soon!</p>
+                    <Link to="/find-work">
+                      <Button>Browse All Jobs</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Fallback Message for No Exact Matches */}
+                    {(recommendedJobs[0]?.matchScore || 0) === 0 && (
+                      <div className="col-span-full mb-2 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3 text-sm text-amber-800 animate-in fade-in slide-in-from-top-2 duration-500">
+                        <div className="p-1 bg-amber-100 rounded-full shrink-0">
+                          <Zap size={14} className="text-amber-600 fill-amber-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold">No exact matches found yet.</p>
+                          <p className="text-amber-700/80">We couldn't find any new jobs matching your specific skills. Here are the latest openings in the marketplace:</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {recommendedJobs.map((job) => (
+                      <Card key={job.id} variant="glass-light" hover={true} className="p-6 flex flex-col justify-between h-full">
+                        <div>
+                          <div className="flex justify-between items-start mb-4">
+                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg tracking-[0.1em] border ${(job.matchScore || 0) > 0
+                                ? 'bg-primary-500/10 text-primary-700 border-primary-500/10'
+                                : 'bg-gray-100 text-gray-500 border-gray-200'
+                              }`}>
+                              {(job.matchScore || 0) > 0 ? 'Smart Match' : 'New Job'}
+                            </span>
+                            <span className="text-sm font-black text-gray-900 tracking-tight">
+                              {job.budgetType === 'hourly' && job.budget?.min !== undefined
+                                ? `₹${job.budget.min.toLocaleString()}-${job.budget.max.toLocaleString()}/hr`
+                                : job.budget?.fixed !== undefined
+                                  ? `₹${job.budget.fixed.toLocaleString()}`
+                                  : job.budget !== undefined && typeof job.budget === 'number'
+                                    ? `₹${job.budget.toLocaleString()}`
+                                    : 'Budget N/A'}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-gray-900 mb-3 text-lg leading-tight">{job.title}</h3>
+                          <div className="flex flex-wrap gap-2 mb-6">
+                            {(Array.isArray(job.skills) ? job.skills : []).slice(0, 3).map(skill => (
+                              <span key={skill} className="text-[10px] bg-white/40 text-gray-600 px-2.5 py-1 rounded-full font-bold border border-white/60">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <Link to={`/jobs/${job.id}`}>
+                          <Button variant="outline" size="sm" className="w-full text-xs h-10 rounded-xl border-gray-200 bg-white/40 text-gray-900 hover:bg-primary-500 hover:text-white hover:border-primary-500 transition-all font-bold shadow-sm">View & Apply</Button>
+                        </Link>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* Recent Activity Section */}
