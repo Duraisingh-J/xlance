@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp } from 'lucide-react'; // Import Trending icon
+import { TrendingUp, Filter, X } from 'lucide-react'; // Import Trending icon
+import { motion, AnimatePresence } from 'framer-motion';
 import { useJobs } from '../context/JobsContext';
 import PageTransition from '../components/common/PageTransition';
 import JobCard from '../components/jobs/JobCard';
@@ -13,6 +14,7 @@ export default function FindWorkPage() {
   // In a real app, useJobs() would fetch this. For this redesign demo, we use enriched mock data directly.
   const [jobs, setJobs] = useState(mockJobs);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   return (
     <PageTransition>
@@ -21,6 +23,44 @@ export default function FindWorkPage() {
 
         {/* Compact Utility Search Header */}
         <JobSearchHeader />
+
+        {/* Mobile Filter Toggle */}
+        <button
+          className="lg:hidden fixed bottom-6 right-6 z-40 bg-primary-600 text-white px-5 py-3 rounded-full shadow-xl shadow-primary-600/30 flex items-center gap-2 font-bold hover:scale-105 transition-transform"
+          onClick={() => setShowMobileFilters(true)}
+        >
+          <Filter size={20} /> Filters
+        </button>
+
+        {/* Mobile Filter Drawer */}
+        <AnimatePresence>
+          {showMobileFilters && (
+            <div className="fixed inset-0 z-[100] lg:hidden">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setShowMobileFilters(false)}
+              />
+              <motion.div
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="absolute right-0 top-0 h-full w-[300px] bg-white shadow-2xl overflow-y-auto p-6"
+              >
+                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">Filters</h2>
+                  <button onClick={() => setShowMobileFilters(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-900 transition-colors">
+                    <X size={24} />
+                  </button>
+                </div>
+                <JobFilterSidebar />
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         <div className="max-w-[95%] xl:max-w-7xl mx-auto px-3 sm:px-5 py-8">
           <div className="flex flex-col lg:flex-row gap-8">

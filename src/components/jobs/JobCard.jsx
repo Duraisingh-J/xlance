@@ -97,25 +97,31 @@ const JobCard = ({ job, onClick }) => {
 
             <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
                 {/* Client Info */}
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                    {job.client.verified && (
-                        <CheckCircle2 size={14} className="text-blue-500" />
-                    )}
-                    <span className={`font-semibold ${job.client.verified ? 'text-gray-900' : 'text-gray-700'}`}>
-                        {job.client.verified ? 'Payment Verified' : 'Payment Unverified'}
-                    </span>
-
-                    <div className="flex items-center gap-1 ml-2">
-                        <div className="text-amber-500 flex">
-                            {'★'.repeat(Math.round(job.client.rating))}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-gray-500">
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                            {job.client.verified && (
+                                <CheckCircle2 size={14} className="text-blue-500" />
+                            )}
+                            <span className={`font-semibold ${job.client.verified ? 'text-gray-900' : 'text-gray-700'}`}>
+                                {job.client.verified ? 'Payment Verified' : 'Payment Unverified'}
+                            </span>
                         </div>
-                        <span className="font-medium text-gray-900">{job.client.rating}</span>
+
+                        <div className="flex items-center gap-1">
+                            <div className="text-amber-500 flex">
+                                {'★'.repeat(Math.round(job.client.rating))}
+                            </div>
+                            <span className="font-medium text-gray-900">{job.client.rating}</span>
+                        </div>
                     </div>
 
-                    <span className="ml-2 font-medium text-gray-900">{job.client.spent}</span>
-                    <span className="flex items-center gap-1 ml-2">
-                        <MapPin size={12} /> {job.client.location}
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <span className="font-medium text-gray-900">{job.client.spent}</span>
+                        <span className="flex items-center gap-1">
+                            <MapPin size={12} /> {job.client.location}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Budget Display */}
