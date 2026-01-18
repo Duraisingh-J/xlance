@@ -38,20 +38,49 @@ const SignUpPage = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
 
+  const validateField = (name, value, data) => {
+    if (name === 'name' && !value) return "Name required";
+    if (name === 'email') {
+      if (!value) return "Email required";
+      if (!validateEmail(value)) return "Invalid email format";
+    }
+    if (name === 'password') {
+      if (!value) return "Password required";
+      if (value.length < 12) return "Must be at least 12 characters";
+      const result = validatePassword(value);
+      if (!result.isValid) return "Password too weak (Score 60+ required)";
+    }
+    if (name === 'confirmPassword') {
+      if (value !== data.password) return "Passwords do not match";
+    }
+    return "";
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+
+      // Real-time validation
+      if (touched[name] || errors[name] || name === 'confirmPassword') {
+        setErrors(prevErr => ({ ...prevErr, [name]: validateField(name, value, updated) }));
+      }
+      return updated;
+    });
   };
 
   const handleBlur = async (e) => {
     const { name, value } = e.target;
-    if (name === "email" && value && validateEmail(value)) {
+    setTouched(prev => ({ ...prev, [name]: true }));
+
+    const error = validateField(name, value, formData);
+    setErrors(prev => ({ ...prev, [name]: error }));
+
+    if (name === "email" && !error && value) {
       setIsCheckingEmail(true);
       const exists = await checkEmailExists(value);
       if (exists) {
@@ -72,16 +101,19 @@ const SignUpPage = () => {
     e.preventDefault();
 
     const eMap = {};
-    if (!formData.name) eMap.name = "Name required";
-    if (!validateEmail(formData.email)) eMap.email = "Invalid email";
-    if (!validatePassword(formData.password)) eMap.password = "Min 8 characters";
-    if (formData.password !== formData.confirmPassword)
-      eMap.confirmPassword = "Passwords do not match";
+    Object.keys(formData).forEach(key => {
+      const err = validateField(key, formData[key], formData);
+      if (err) eMap[key] = err;
+    });
 
-    if (errors.email) return; // Block if email error exists
+    if (errors.email && errors.email !== "Invalid email format") {
+      // Keep existing "Account exists" error if present
+      eMap.email = errors.email;
+    }
 
-    if (Object.keys(eMap).length) {
+    if (Object.keys(eMap).length > 0) {
       setErrors(eMap);
+      setTouched({ name: true, email: true, password: true, confirmPassword: true });
       return;
     }
 
@@ -268,6 +300,58 @@ const SignUpPage = () => {
                 error={errors.password}
                 className="bg-white/40 border-white/60 focus:bg-white transition-all h-14 rounded-2xl mt-1"
               />
+
+              {/* Password Strength Meter & Pattern Checklist */}
+              {formData.password && (() => {
+                const analysis = validatePassword(formData.password);
+                const scoreColor = analysis.score < 30 ? 'bg-red-500' : (analysis.score < 60 ? 'bg-yellow-500' : 'bg-green-500');
+                const textColor = analysis.score < 30 ? 'text-red-500' : (analysis.score < 60 ? 'text-yellow-500' : 'text-green-600');
+                const normalizedScore = Math.min(100, analysis.score * 1.25);
+
+                return (
+                  <div className="mt-2 mb-6 px-1 animate-in slide-in-from-top-2 duration-300">
+                    {/* Score Bar */}
+                    <div className="relative h-2 w-full bg-gray-100 rounded-full mb-2 overflow-hidden">
+                      <div
+                        style={{ width: `${normalizedScore}%` }}
+                        className={`h-full transition-all duration-500 ${scoreColor}`}
+                      />
+                    </div>
+
+                    <div className="flex justify-between items-center mb-3">
+                      <span className={`text-xs font-black uppercase tracking-widest ${textColor}`}>
+                        {analysis.strength}
+                      </span>
+                      {analysis.isValid && (
+                        <span className="text-[10px] text-green-600 font-bold flex items-center gap-1">
+                          <ShieldCheck size={12} /> Excellent
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Feedback Checklist */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: "12+ Characters", met: !analysis.feedback.includes("Use at least 12 characters") },
+                        { label: "Lowercase", met: !analysis.feedback.includes("Add lowercase letters") },
+                        { label: "Uppercase", met: !analysis.feedback.includes("Add uppercase letters") },
+                        { label: "Numbers", met: !analysis.feedback.includes("Add numbers") },
+                        { label: "Special Chars", met: !analysis.feedback.includes("Add special characters") },
+                        { label: "No Repeats/Seq", met: !analysis.feedback.some(f => f.includes("Avoid")) },
+                      ].map((req, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center transition-all duration-300 ${req.met ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                            {req.met && <span className="font-bold text-[10px]">✓</span>}
+                          </div>
+                          <span className={`text-[10px] font-medium transition-all duration-300 ${req.met ? 'text-gray-700' : 'text-gray-400'}`}>
+                            {req.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <Input
                 label="Confirm Password"

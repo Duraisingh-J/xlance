@@ -4,7 +4,7 @@ import { Mail, Lock } from "lucide-react";
 import GoogleIcon from "../assets/google-color-svgrepo-com.svg";
 import { useAuth } from "../context/AuthContext";
 import { Button, Card, Input } from "../components/common";
-import { validateEmail } from "../utils/helpers";
+import { validateEmail, validatePassword } from "../utils/helpers";
 import PageTransition from "../components/common/PageTransition";
 import usePageTitle from "../hooks/usePageTitle";
 
@@ -14,77 +14,87 @@ const SignInPage = () => {
     password: "",
   });
   const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
   usePageTitle("Sign In");
-  const { signIn, signInWithGoogle, user, userProfile } = useAuth();
+  const { signIn, signUp, signInWithGoogle, checkEmailExists, user, userProfile } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already authenticated, BUT skip if checking Google Strictness
+  // Redirect if already authenticated
   const isGoogleSigningIn = React.useRef(false);
 
   React.useEffect(() => {
     if (user && userProfile && !isGoogleSigningIn.current) {
       if (userProfile.onboarded) {
-        // If already onboarded, go to specific dashboard
         const role = (Array.isArray(userProfile.role) && userProfile.role.includes("client")) || userProfile.role === "client" ? "client" : "freelancer";
         navigate(`/dashboard/${role}`, { replace: true });
       } else {
         navigate("/onboarding", { replace: true });
       }
-    } else if (user && !userProfile) {
-      // User logged in but profile loading... wait.
     }
   }, [user, userProfile, navigate]);
+
+  const validateField = (name, value) => {
+    if (!value) return "Required";
+    if (name === 'email' && !validateEmail(value)) return "Invalid email format";
+    return "";
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    setTouched(prev => ({ ...prev, [name]: true }));
+    setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+
+    // Real-time validation if field has been touched or currently has an error
+    if (touched[name] || errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: validateField(name, value) }));
     }
   };
 
-  // ✅ EMAIL SIGN IN
+  // ✅ EMAIL SIGN IN (With Smart Auto-Signup)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newErrors = {};
-    if (!validateEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email";
-    }
-    if (!formData.password) {
-      newErrors.password = "Password is required";
-    }
+    if (!validateEmail(formData.email)) newErrors.email = "Please enter a valid email";
+    if (!formData.password) newErrors.password = "Password is required";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      setTouched({ email: true, password: true });
       return;
     }
 
     setIsLoading(true);
-    try {
-      await signIn(formData.email, formData.password);
-      // Navigation handled by useEffect
-    } catch (err) {
-      console.error("Sign in error:", err.code, err.message);
 
-      const errorCode = err.code;
-      // Map specific errors to fields
-      if (errorCode === "auth/user-not-found" || errorCode === "auth/invalid-email") {
-        setErrors({ email: "Account not found. Please Sign Up." });
-      } else if (errorCode === "auth/wrong-password") {
-        setErrors({ password: "Incorrect password" });
-      } else if (errorCode === "auth/invalid-credential" || errorCode === "auth/invalid-login-credentials") {
-        // Generic security error from Firebase (covers both wrong password & user not found)
-        setErrors({ email: "Invalid email or password" });
-      } else if (errorCode === "auth/too-many-requests") {
-        setErrors({ submit: "Too many attempts. Reset password or try later." });
-      } else {
-        // Fallback: If it's a login error, it's usually related to the email/account
-        setErrors({ email: err?.message || "Sign in failed" });
+    try {
+      // Explicitly check for user existence to give clear feedback
+      const exists = await checkEmailExists(formData.email);
+
+      if (!exists) {
+        setErrors({ email: "Unregistered user. Please Sign Up." });
+        setIsLoading(false);
+        return;
       }
 
+      await signIn(formData.email, formData.password);
+
+    } catch (err) {
+      console.error("Auth Fail:", err);
+      const errorCode = err.code;
+      if (errorCode === "auth/wrong-password" || errorCode === "auth/invalid-credential") {
+        setErrors({ submit: "Incorrect email or password." });
+      } else if (errorCode === "auth/too-many-requests") {
+        setErrors({ submit: "Too many attempts. Try later." });
+      } else {
+        setErrors({ submit: err.message || "Sign in failed" });
+      }
       setIsLoading(false);
     }
   };

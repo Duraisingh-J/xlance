@@ -66,16 +66,20 @@ export const AuthProvider = ({ children }) => {
       setAuthLoading(true);
       const result = await authService.signup(email, password);
 
-      // OPTIMIZATION: Start profile creation but don't blocking navigation
-      // We set the user immediately so the UI can proceed
+      // CRITICAL: Await profile creation to ensure data exists before navigation
+      // This prevents race conditions where the user reaches the dashboard before their profile exists
       setUser(result.user);
 
-      userService.createUserProfile(result.user.uid, {
-        email: result.user.email,
-        name: name
-      }).then(newProfile => {
+      try {
+        const newProfile = await userService.createUserProfile(result.user.uid, {
+          email: result.user.email,
+          name: name
+        });
         setUserProfile(newProfile);
-      }).catch(err => console.error("Background profile creation failed:", err));
+      } catch (err) {
+        console.error("Profile creation failed (Critical):", err);
+        // Note: User is still authenticated at this point
+      }
 
       return result.user;
     } catch (err) {
@@ -94,7 +98,23 @@ export const AuthProvider = ({ children }) => {
       // OPTIMIZATION: Set user immediately
       setUser(result.user);
 
-      // (Subscription effect will load profile)
+      // Safety Check: Ensure profile exists (Self-Healing for Email/Pass users)
+      // This handles cases where signup failed to write Firestore data
+      try {
+        const profile = await userService.getUserProfile(result.user.uid);
+        if (!profile) {
+          console.warn("Log-in successful, but no Profile found. Self-healing...");
+          const newProfile = await userService.createUserProfile(result.user.uid, {
+            email: result.user.email,
+            name: result.user.displayName || "User",
+            onboarded: false,
+            role: []
+          });
+          setUserProfile(newProfile);
+        }
+      } catch (syncErr) {
+        console.error("Profile self-healing failed during login:", syncErr);
+      }
 
       return result.user;
     } catch (err) {

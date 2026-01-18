@@ -35,7 +35,7 @@ const Input = React.forwardRef(({ label, error, icon, className, type, ...props 
             onClick={togglePassword}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
           </button>
         )}
       </div>

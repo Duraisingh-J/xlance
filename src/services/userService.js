@@ -103,6 +103,25 @@ export const userService = {
                     const counterSnap = await transaction.get(counterRef);
 
                     let counts = counterSnap.exists() ? counterSnap.data() : { freelancerCount: 0, clientCount: 0 };
+
+                    // --- SELF-HEALING: Reset counters if data is wiped ---
+                    if (counts.freelancerCount > 0) {
+                        const checkRef = doc(db, 'users', 'directory', 'freelancers', 'F-001');
+                        const checkSnap = await transaction.get(checkRef);
+                        if (!checkSnap.exists()) {
+                            console.log("Detected clean slate. Resetting Freelancer Counter.");
+                            counts.freelancerCount = 0;
+                        }
+                    }
+                    if (counts.clientCount > 0) {
+                        const checkRef = doc(db, 'users', 'directory', 'clients', 'C-001');
+                        const checkSnap = await transaction.get(checkRef);
+                        if (!checkSnap.exists()) {
+                            console.log("Detected clean slate. Resetting Client Counter.");
+                            counts.clientCount = 0;
+                        }
+                    }
+
                     let didUpdateCounters = false;
 
                     // 2. Handle Roles & ID Generation

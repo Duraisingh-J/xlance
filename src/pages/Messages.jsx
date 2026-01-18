@@ -278,6 +278,9 @@ const Messages = () => {
                       placeholder="Type a message..."
                       className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-2.5 max-h-32 text-sm text-gray-900 placeholder:text-gray-400"
                       rows={1}
+                      spellCheck="true"
+                      autoCorrect="on"
+                      autoCapitalize="sentences"
                     />
                     <button
                       onClick={handleSend}
