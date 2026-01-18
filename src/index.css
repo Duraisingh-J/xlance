@@ -48,4 +48,35 @@
       transform: scale(1.1);
     }
   }
+
+  /* Custom Scrollbar for Dark Mode Sections */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px !important;
+    height: 6px !important;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent !important;
+    margin-right: 2px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(134, 150, 160, 0.3) !important;
+    border-radius: 3px !important;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(134, 150, 160, 0.5) !important;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
 }

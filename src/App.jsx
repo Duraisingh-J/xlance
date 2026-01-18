@@ -31,8 +31,6 @@ function AppLayout() {
   const { authLoading, error, user } = useAuth(); // Get user
   const location = useLocation();
 
-
-
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -43,6 +41,12 @@ function AppLayout() {
       </div>
     );
   }
+
+  // Show Navbar everywhere EXCEPT Onboarding
+  const showNav = !['/onboarding'].includes(location.pathname);
+
+  // Show Footer everywhere EXCEPT Onboarding and Messages (Messages is full-height app-like)
+  const showFooter = !['/onboarding', '/messages'].includes(location.pathname);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -55,9 +59,10 @@ function AppLayout() {
         </div>
       )}
 
-      {location.pathname !== '/onboarding' && <Navbar />}
+      {showNav && <Navbar />}
 
-      <main className="flex-1">
+      {/* Main fills 100vh minus header if Footer is invalid (like in Messages), else flex-1 */}
+      <main className={`flex-1 flex flex-col ${!showFooter ? 'min-h-0' : ''}`}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/auth/signin" element={<SignInPage />} />
@@ -145,15 +150,6 @@ function AppLayout() {
           />
 
           <Route
-            path="/profile/create"
-            element={
-              <ProtectedRoute>
-                <CreateProfilePage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/client/jobs"
             element={
               <ProtectedRoute>
@@ -175,7 +171,7 @@ function AppLayout() {
         </Routes>
       </main>
 
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 }
