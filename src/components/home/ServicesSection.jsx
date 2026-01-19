@@ -3,12 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as Icons from 'lucide-react';
 import { SERVICES } from '../../utils/constants';
 import Button from '../common/Button';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { mockFreelancers } from '../../utils/mockData';
 import FreelancerCard from './FreelancerCard';
 
 const ServicesSection = () => {
   const [selectedService, setSelectedService] = React.useState(null);
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (location.state?.serviceName) {
+      const service = SERVICES.find(s => s.name === location.state.serviceName);
+      if (service) {
+        setSelectedService(service);
+        setTimeout(() => {
+          const element = document.getElementById('explore-services');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    }
+  }, [location.state]);
 
   const getIcon = (iconName) => {
     const iconMap = {
@@ -24,7 +40,10 @@ const ServicesSection = () => {
 
   // Filter freelancers based on selected service
   const filteredFreelancers = selectedService
-    ? mockFreelancers.filter(f => f.category === selectedService.name)
+    ? mockFreelancers
+      .filter(f => f.category === selectedService.name)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 3)
     : [];
 
   const handleServiceClick = (service) => {
@@ -36,7 +55,7 @@ const ServicesSection = () => {
   };
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-sky-50/50">
+    <section id="explore-services" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-sky-50/50">
       <div className="max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0 }}
@@ -95,7 +114,7 @@ const ServicesSection = () => {
                     <h3 className="text-2xl font-bold text-gray-900">Top Rated {selectedService.name} Experts</h3>
                     <p className="text-gray-500">Verified professionals ready to work</p>
                   </div>
-                  <Link to="/find-work">
+                  <Link to={`/talent?category=${encodeURIComponent(selectedService.name)}`}>
                     <Button variant="outline" className="hidden sm:flex items-center gap-2">
                       View All <Icons.ArrowRight size={16} />
                     </Button>
@@ -117,7 +136,7 @@ const ServicesSection = () => {
                 )}
 
                 <div className="mt-8 sm:hidden text-center">
-                  <Link to="/find-work">
+                  <Link to={`/talent?category=${encodeURIComponent(selectedService.name)}`}>
                     <Button className="w-full">View All Experts</Button>
                   </Link>
                 </div>

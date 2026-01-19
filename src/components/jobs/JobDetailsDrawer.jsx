@@ -18,6 +18,10 @@ const JobDetailsDrawer = ({ job, isOpen, onClose }) => {
 
     if (!isOpen || !job) return null;
 
+    const isFreelancer = Array.isArray(userProfile?.role)
+        ? userProfile.role.some(r => r.toLowerCase() === 'freelancer')
+        : userProfile?.role?.toLowerCase() === 'freelancer';
+
     const isHourly = job.budgetType === 'hourly';
     const formatBudget = () => {
         if (isHourly) {
@@ -175,7 +179,7 @@ const JobDetailsDrawer = ({ job, isOpen, onClose }) => {
 
                             {/* Proposal Form Section */}
                             <div className="bg-gray-50 -mx-6 md:-mx-8 p-6 md:p-8 mt-8 border-t border-gray-100">
-                                {userProfile?.role?.includes('freelancer') ? (
+                                {isFreelancer ? (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-xl font-bold text-gray-900">Submit a Proposal</h2>

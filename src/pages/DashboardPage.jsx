@@ -21,7 +21,7 @@ const DashboardPage = () => {
   }
 
   // Double check role matching
-  const targetRole = role || 'freelancer';
+  const targetRole = (role || 'freelancer').toLowerCase();
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-auto">

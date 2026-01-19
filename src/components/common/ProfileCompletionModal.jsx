@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, Circle, User, Mail, Briefcase, MapPin, IndianRupee, Award, Save, Edit2, Upload, Star, ShieldCheck, Zap, Laptop, Users, Rocket, Trophy } from 'lucide-react';
+import { X, CheckCircle2, User, Briefcase, MapPin, IndianRupee, Award, Edit2, Upload, Star, ShieldCheck, Zap, Laptop, Users, Rocket, Trophy, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { userService } from '../../services/userService';
 import Button from './Button';
 
 const ProfileCompletionModal = ({ isOpen, onClose }) => {
@@ -9,6 +10,14 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
   const [editingField, setEditingField] = useState(null);
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Crop State
+  const [cropImage, setCropImage] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const imageRef = useRef(null);
 
   const profileFields = useMemo(() => {
     if (!userProfile && !user) return [];
@@ -40,6 +49,7 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
         icon: Briefcase,
         value: userProfile?.role ? (Array.isArray(userProfile.role) ? userProfile.role.join(', ') : userProfile.role) : '',
         completed: !!(userProfile?.role && (Array.isArray(userProfile.role) ? userProfile.role.length > 0 : userProfile.role)),
+        disabled: !!(userProfile?.role && (Array.isArray(userProfile.role) ? userProfile.role.length > 0 : userProfile.role)),
         type: 'select',
         options: [
           { value: 'Freelancer', icon: Laptop, desc: 'I want to offer my services' },
@@ -126,12 +136,18 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
   const handleCancel = () => {
     setEditingField(null);
     setFormData({});
+    setCropImage(null);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
   };
 
   const handleSave = async (field) => {
     setSaving(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      if (user?.uid) {
+        const updates = { [field.id]: formData[field.id] };
+        await userService.updateUserProfile(user.uid, updates);
+      }
       setEditingField(null);
       setFormData({});
     } catch (error) {
@@ -141,97 +157,265 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
     }
   };
 
+  // Crop Handlers
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+  };
+  const handleMouseUp = () => setIsDragging(false);
+
+  const performCrop = async () => {
+    if (!imageRef.current) return;
+    const img = imageRef.current;
+
+    // Calculate fitting logic (Contain)
+    const boxSize = 256; // w-64
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let renderW, renderH;
+
+    if (aspect > 1) {
+      renderW = boxSize;
+      renderH = boxSize / aspect;
+    } else {
+      renderH = boxSize;
+      renderW = boxSize * aspect;
+    }
+
+    const baseScale = renderW / img.naturalWidth; // Scale to fit in box
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+
+    // Center Canvas
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+
+    // Apply Pan (Adjusted for Canvas/Box ratio)
+    const canvasRatio = canvas.width / boxSize;
+    ctx.translate(pan.x * canvasRatio, pan.y * canvasRatio);
+
+    // Apply Scale mechanism
+    // natural * baseScale -> fits in box
+    // fits in box * zoom -> visual size in box
+    // visual size * canvasRatio -> size in canvas
+    const finalScale = baseScale * zoom * canvasRatio;
+    ctx.scale(finalScale, finalScale);
+
+    // Draw centered
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+    ctx.restore();
+
+    const base64 = canvas.toDataURL('image/jpeg', 0.9);
+    setFormData(prev => ({ ...prev, photoURL: base64 }));
+    setCropImage(null);
+  };
+
   const renderFieldInput = (field) => {
     const isEditing = editingField === field.id;
     const value = isEditing ? (formData[field.id] ?? field.value) : field.value;
 
-    if (!isEditing) {
+    if (!isEditing) return null;
+
+    const inputClass = "w-full px-4 py-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:outline-none text-sm transition-all shadow-sm";
+
+    // LOCKED ROLE
+    if (field.id === 'role' && field.disabled) {
       return (
-        <div className="flex items-center justify-between p-3.5 bg-white/40 rounded-2xl border border-white/60 hover:border-primary-300 hover:bg-white transition-all group shadow-sm backdrop-blur-sm">
-          <span className="text-sm text-gray-700 flex-1 truncate font-medium">
-            {value || <span className="text-gray-400 font-normal italic">{field.placeholder}</span>}
-          </span>
-          <button
-            onClick={() => handleEdit(field)}
-            className="ml-2 p-2 rounded-xl text-primary-600 bg-primary-50 hover:bg-primary-100 transition-all opacity-0 group-hover:opacity-100"
-          >
-            <Edit2 size={12} />
-          </button>
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+          <div className="flex justify-between items-center mb-4">
+            <label className="text-sm font-semibold text-gray-900">{field.label}</label>
+            <div className="flex items-center gap-1 text-xs font-bold bg-amber-50 text-amber-600 px-2 py-1 rounded">
+              <Lock size={12} /> <span>Locked</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-500 cursor-not-allowed opacity-90">
+            <div className="p-2 bg-gray-100 rounded-lg"><field.icon size={20} /></div>
+            <div className="flex-1">
+              <p className="text-xs font-bold uppercase tracking-wider mb-0.5 text-gray-400">Assigned Role</p>
+              <p className="font-bold text-gray-700">{field.value}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button size="sm" variant="ghost" onClick={handleCancel} className="rounded-lg border border-gray-200">Close</Button>
+          </div>
         </div>
       );
     }
 
-    return (
-      <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-        {field.id === 'photoURL' ? (
-          <div className="flex items-center gap-4 p-4 bg-white/60 rounded-3xl border border-white/80 shadow-inner">
-            <div className="w-16 h-16 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-400 border-2 border-primary-100 overflow-hidden shadow-sm">
-              {value ? <img src={value} className="w-full h-full object-cover" /> : <Upload size={24} />}
+    // PHOTO CROPPER
+    if (field.id === 'photoURL') {
+      if (cropImage) {
+        return (
+          <div className="space-y-4 p-5 bg-gray-50 rounded-2xl border border-gray-200 animate-in fade-in slide-in-from-top-2 shadow-lg">
+            <h4 className="text-sm font-bold text-center text-gray-700">Adjust Profile Photo</h4>
+
+            {/* Crop Area: Flex Center for Contain logic */}
+            <div
+              className="relative w-64 h-64 mx-auto bg-gray-900 rounded-full overflow-hidden cursor-move border-4 border-white shadow-xl touch-none select-none flex items-center justify-center"
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              <img
+                ref={imageRef}
+                src={cropImage}
+                className="max-w-full max-h-full object-contain pointer-events-none select-none"
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                }}
+                draggable={false}
+              />
+              {/* Overlay guide */}
+              <div className="absolute inset-0 border-2 border-white/30 rounded-full pointer-events-none z-10"></div>
             </div>
-            <input
-              type="text"
-              value={value}
-              onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              placeholder="Paste photo URL"
-              className="flex-1 px-4 py-3 bg-white border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 focus:outline-none text-sm transition-all shadow-sm"
-            />
-          </div>
-        ) : field.type === 'textarea' ? (
-          <div className="relative">
-            <textarea
-              value={value}
-              onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              placeholder={field.placeholder}
-              className="w-full px-5 py-4 bg-white border border-gray-100 rounded-3xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:outline-none text-sm shadow-inner min-h-[120px] transition-all"
-            />
-            <div className="absolute bottom-4 right-5 text-[10px] font-bold text-gray-400 bg-gray-50/80 px-2 py-1 rounded-full uppercase">
-              {value?.length || 0} Chars
+
+            <div className="flex items-center gap-4 px-4">
+              <span className="text-xs font-bold text-gray-500">Zoom</span>
+              <input
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.1"
+                value={zoom}
+                onChange={(e) => setZoom(parseFloat(e.target.value))}
+                className="flex-1 accent-primary-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button size="sm" onClick={performCrop} className="w-full">Apply & Preview</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setCropImage(null); setZoom(1); setPan({ x: 0, y: 0 }); }} className="w-full border bg-white">Cancel</Button>
             </div>
           </div>
-        ) : field.type === 'select' ? (
-          <div className="grid grid-cols-1 gap-2.5">
-            {field.options?.map(opt => {
-              const OptIcon = opt.icon;
-              const isSelected = value === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, [field.id]: opt.value })}
-                  className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected
-                      ? 'border-primary-500 bg-primary-50/50 shadow-lg shadow-primary-500/10'
-                      : 'border-gray-100 bg-white hover:border-primary-200'
-                    }`}
-                >
-                  <div className={`p-2 rounded-lg ${isSelected ? 'bg-primary-500 text-white' : 'bg-gray-50 text-gray-400'}`}>
-                    <OptIcon size={18} />
-                  </div>
-                  <div className="text-left">
-                    <p className={`text-sm font-black ${isSelected ? 'text-primary-700' : 'text-gray-700'}`}>{opt.value}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tight">{opt.desc}</p>
-                  </div>
-                  {isSelected && <CheckCircle2 size={16} className="ml-auto text-primary-500" />}
-                </button>
-              );
-            })}
+        );
+      }
+
+      return (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-in fade-in slide-in-from-top-2">
+          <div className="flex justify-between items-center mb-4">
+            <label className="text-sm font-semibold text-gray-900">{field.label}</label>
+            {field.completed && <CheckCircle2 size={16} className="text-green-500" />}
           </div>
-        ) : (
-          <div className="relative group">
-            <input
-              type={field.type}
-              value={value}
-              onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })}
-              placeholder={field.placeholder}
-              className="w-full px-5 py-4 bg-white border border-gray-100 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 focus:outline-none text-sm shadow-sm transition-all"
-            />
-            {field.type === 'number' && (
-              <span className="absolute right-5 top-1/2 -translate-y-1/2 text-primary-600 font-black text-xs uppercase tracking-widest bg-primary-50 px-2 py-1 rounded-lg">INR</span>
+
+          <div className="space-y-4">
+            {/* Preview Area */}
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-primary-300 border-4 border-white shadow-lg overflow-hidden relative group/img">
+                {value ? <img src={value} className="w-full h-full object-cover" /> : <Upload size={32} />}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 p-1 bg-white rounded-lg border border-gray-200">
+              <button
+                onClick={() => setFormData(prev => ({ ...prev, [field.id + '_mode']: 'upload' }))}
+                className={`py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${(!formData[field.id + '_mode'] || formData[field.id + '_mode'] === 'upload') ? 'bg-primary-50 text-primary-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                Upload
+              </button>
+              <button
+                onClick={() => setFormData(prev => ({ ...prev, [field.id + '_mode']: 'url' }))}
+                className={`py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${(formData[field.id + '_mode'] === 'url') ? 'bg-primary-50 text-primary-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                URL Link
+              </button>
+            </div>
+
+            {(!formData[field.id + '_mode'] || formData[field.id + '_mode'] === 'upload') ? (
+              <div className="text-center">
+                <label className="block w-full cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setCropImage(reader.result);
+                          setZoom(1);
+                          setPan({ x: 0, y: 0 });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  <div className="flex flex-col items-center gap-2 py-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-400 hover:bg-primary-50/30 transition-all group/upload">
+                    <div className="p-3 bg-primary-50 text-primary-600 rounded-full group-hover/upload:scale-110 transition-transform"><Upload size={20} /></div>
+                    <span className="text-xs font-bold text-gray-500 group-hover/upload:text-primary-600">Click to Upload</span>
+                  </div>
+                </label>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input type="text" value={value} onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} placeholder="https://example.com/image.png" className={inputClass} />
+                <p className="text-[10px] text-gray-400 text-center">Paste a direct link to a public image.</p>
+              </div>
             )}
           </div>
-        )}
-        <div className="flex gap-3 pt-2">
-          <Button size="sm" onClick={() => handleSave(field)} isLoading={saving} className="flex-1 rounded-2xl shadow-lg shadow-primary-500/10">Save Configuration</Button>
-          <Button size="sm" variant="ghost" onClick={handleCancel} className="rounded-2xl">Cancel</Button>
+          <div className="flex gap-3 pt-4">
+            <Button size="sm" onClick={() => handleSave(field)} isLoading={saving} className="rounded-lg w-full shadow-md shadow-primary-500/20">Save Photo</Button>
+            <Button size="sm" variant="ghost" onClick={handleCancel} className="rounded-lg border border-gray-200">Cancel</Button>
+          </div>
+        </div>
+      );
+    }
+
+    // STANDARD FIELDS
+    return (
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-in fade-in slide-in-from-top-2">
+        <div className="flex justify-between items-center mb-4">
+          <label className="text-sm font-semibold text-gray-900">{field.label}</label>
+          {field.completed && <CheckCircle2 size={16} className="text-green-500" />}
+        </div>
+
+        <div className="space-y-4">
+          {field.type === 'textarea' ? (
+            <textarea value={value} onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} placeholder={field.placeholder} className={`${inputClass} min-h-[120px]`} />
+          ) : field.type === 'select' ? (
+            <div className="grid grid-cols-1 gap-2">
+              {field.options?.map(opt => {
+                const OptIcon = opt.icon;
+                const isSelected = value === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, [field.id]: opt.value })}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${isSelected ? 'border-primary-500 bg-primary-50 text-primary-900' : 'border-gray-200 bg-white hover:border-primary-200 hover:bg-gray-50'}`}
+                  >
+                    <div className={`p-2 rounded-md ${isSelected ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'}`}><OptIcon size={16} /></div>
+                    <div className="text-left">
+                      <p className={`text-sm font-semibold ${isSelected ? 'text-primary-900' : 'text-gray-700'}`}>{opt.value}</p>
+                      <p className="text-xs text-gray-500">{opt.desc}</p>
+                    </div>
+                    {isSelected && <CheckCircle2 size={16} className="ml-auto text-primary-600" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="relative group">
+              <input type={field.type} value={value} onChange={(e) => setFormData({ ...formData, [field.id]: e.target.value })} placeholder={field.placeholder} className={inputClass} />
+              {field.type === 'number' && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-xs">INR</span>}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 pt-4">
+          <Button size="sm" onClick={() => handleSave(field)} isLoading={saving} className="rounded-lg">Save</Button>
+          <Button size="sm" variant="ghost" onClick={handleCancel} className="rounded-lg border border-gray-200">Cancel</Button>
         </div>
       </div>
     );
@@ -241,172 +425,93 @@ const ProfileCompletionModal = ({ isOpen, onClose }) => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        {/* Backdrop with extreme blur */}
+      <div className="fixed inset-0 z-[999] overflow-hidden">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="absolute inset-0 bg-gray-950/70 backdrop-blur-2xl"
-        />
-
-        {/* Modal Container */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 30 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 30 }}
-          className="relative bg-white/70 backdrop-blur-[40px] rounded-[3rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row border border-white/60"
+          initial={{ x: '100%', opacity: 0.5 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: '100%', opacity: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="fixed inset-y-0 right-0 w-full md:w-[85%] lg:w-[80%] max-w-6xl bg-white/95 backdrop-blur-xl border-l border-white/20 shadow-2xl flex flex-col md:flex-row h-full z-[999] overflow-hidden"
         >
-          {/* Dashboard/Left Column */}
-          <div className="w-full md:w-[340px] bg-gradient-to-br from-gray-950 via-gray-900 to-black p-10 text-white flex flex-col">
-            <div className="mb-10">
-              <div className="flex justify-between items-center mb-10">
-                <div className="w-12 h-12 bg-primary-600 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-primary-600/30">X</div>
-                <button onClick={onClose} className="p-2.5 border border-white/10 rounded-full hover:bg-white/10 transition-colors">
-                  <X size={20} />
-                </button>
+          {/* LEFT SIDEBAR */}
+          <div className="w-full md:w-[320px] lg:w-[380px] bg-slate-50 border-b md:border-b-0 md:border-r border-gray-200 p-6 flex flex-col overflow-y-auto overflow-x-hidden shrink-0 relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+            <div className="mb-8 relative">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-900 text-white rounded-xl flex items-center justify-center font-bold shadow-lg"><User size={20} /></div>
+                  <h2 className="text-xl font-bold text-gray-900 tracking-tight">Profile Setup</h2>
+                </div>
+                <button onClick={onClose} className="md:hidden p-2 bg-white border border-gray-200 rounded-full text-gray-500"><X size={20} /></button>
               </div>
-              <h2 className="text-3xl font-black tracking-tighter mb-2">Profile Intel</h2>
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest leading-relaxed">System Optimization Engine v2.0</p>
+              <p className="text-sm text-gray-500 leading-relaxed font-medium">Complete your freelancer identity to unlock higher tiers and better job matches.</p>
             </div>
 
-            {/* Premium Progress Visual */}
-            <div className="relative w-52 h-52 mx-auto mb-12 group">
-              <svg className="w-full h-full transform -rotate-90 drop-shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                <circle cx="104" cy="104" r="92" stroke="currentColor" strokeWidth="16" fill="transparent" className="text-white/5" />
-                <motion.circle
-                  cx="104"
-                  cy="104"
-                  r="92"
-                  stroke="currentColor"
-                  strokeWidth="16"
-                  fill="transparent"
-                  strokeDasharray={2 * Math.PI * 92}
-                  initial={{ strokeDashoffset: 2 * Math.PI * 92 }}
-                  animate={{ strokeDashoffset: 2 * Math.PI * 92 * (1 - completionPercentage / 100) }}
-                  className={`${tier.color} drop-shadow-[0_0_20px_rgba(37,99,235,0.4)]`}
-                  strokeLinecap="round"
-                />
+            <div className="relative w-48 h-48 mx-auto mb-8 shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-gray-200" />
+                <motion.circle cx="50%" cy="50%" r="45%" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={2 * Math.PI * (45 * 0.9)} initial={{ pathLength: 0 }} animate={{ pathLength: completionPercentage / 100 }} transition={{ duration: 1.5, ease: "easeOut" }} className={`${tier.color}`} strokeLinecap="round" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black tracking-tighter">{completionPercentage}%</span>
-                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mt-2">Efficiency</span>
+                <span className="text-4xl font-black text-gray-900">{completionPercentage}%</span>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Complete</span>
               </div>
             </div>
 
-            {/* Tier Roadmap */}
-            <div className="space-y-6 flex-1">
-              <div className="bg-white/5 rounded-3xl p-6 border border-white/10 backdrop-blur-md relative overflow-hidden group hover:border-primary-500/30 transition-all">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-primary-500/10 rounded-full blur-3xl -mr-12 -mt-12" />
-                <div className="flex items-center gap-4 mb-5">
-                  <div className={`p-3 rounded-xl ${tier.bg} bg-opacity-20 shadow-inner`}>
-                    <tier.icon size={22} className={tier.color} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Current Tier</p>
-                    <p className={`text-base font-black ${tier.color}`}>{tier.name}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Active Benefits</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    {tier.benefits.map((b, i) => (
-                      <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-gray-300">
-                        <CheckCircle2 size={12} className="text-emerald-500" />
-                        {b}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm relative overflow-hidden group mb-auto">
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`p-3 rounded-xl ${tier.bg} bg-opacity-10 text-primary-600`}><tier.icon size={24} className={tier.color} /></div>
+                <div><p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Tier</p><p className={`text-lg font-bold ${tier.color}`}>{tier.name}</p></div>
               </div>
-
-              <div className="px-4">
-                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4">Platform Roadmap</p>
-                <div className="space-y-4">
-                  {[
-                    { l: 'Basic', c: 'text-gray-500', done: true },
-                    { l: 'Verified', c: completionPercentage >= 60 ? 'text-primary-500' : 'text-gray-700', done: completionPercentage >= 60 },
-                    { l: 'Elite', c: completionPercentage >= 100 ? 'text-amber-500' : 'text-gray-700', done: completionPercentage >= 100 }
-                  ].map((step, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${step.done ? step.c.replace('text', 'bg') : 'bg-gray-800'}`} />
-                      <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${step.c}`}>{step.l} Access</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <div className="space-y-2">{tier.benefits.map((b, i) => (<div key={i} className="flex items-center gap-2 text-xs font-medium text-gray-600"><CheckCircle2 size={12} className="text-green-500" /> {b}</div>))}</div>
             </div>
 
-            <div className="pt-8 mt-10 border-t border-white/10">
-              <div className="flex items-center gap-4 text-gray-500 p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group">
-                <ShieldCheck size={20} className="text-emerald-500 group-hover:scale-110 transition-transform" />
-                <div>
-                  <span className="block text-[10px] font-black uppercase tracking-widest">Secured Core</span>
-                  <span className="text-[9px] font-bold text-gray-600 uppercase tracking-tight">Identity Encryption Active</span>
-                </div>
+            <div className="mt-8 pt-6 border-t border-gray-200 hidden md:block">
+              <div className="flex items-start gap-3">
+                <ShieldCheck size={20} className="text-gray-400 mt-0.5" />
+                <div><p className="text-xs font-bold text-gray-900 uppercase">Private & Secure</p><p className="text-xs text-gray-500">Your information is only shared with clients you propose to.</p></div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Dynamic Form UI */}
-          <div className="flex-1 p-10 md:p-14 max-h-[90vh] overflow-y-auto bg-white/40">
-            <div className="mb-14">
-              <div className="inline-block px-3 py-1 bg-primary-100/50 text-primary-700 rounded-full text-[10px] font-black uppercase tracking-widest mb-4 border border-primary-200">System Configuration</div>
-              <h3 className="text-4xl font-black text-gray-950 tracking-tight mb-3">Refine Professional Identity</h3>
-              <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px] opacity-70">Execute parameters to reach peak platform ranking.</p>
-            </div>
-
-            {/* Categorized Fields */}
-            {['Basic', 'Professional', 'Expert'].map((cat) => {
-              const fields = profileFields.filter(f => f.category === cat);
-              if (fields.length === 0) return null;
-
-              return (
-                <div key={cat} className="mb-14 last:mb-0">
-                  <h4 className="flex items-center gap-3 text-[11px] font-black text-primary-600 uppercase tracking-[0.3em] mb-8">
-                    <div className="w-10 h-[3px] bg-primary-600 rounded-full" />
-                    {cat} Intelligence
-                  </h4>
-                  <div className="space-y-6">
-                    {fields.map((field) => {
-                      const Icon = field.icon;
-                      const isFieldEditing = editingField === field.id;
-                      return (
-                        <div key={field.id} className={`group relative p-7 rounded-[2.5rem] border-2 transition-all duration-500 ${field.completed && !isFieldEditing
-                            ? 'bg-emerald-50/40 border-emerald-100/60 shadow-sm'
-                            : isFieldEditing
-                              ? 'bg-white border-primary-200 shadow-2xl scale-[1.02] z-10'
-                              : 'bg-white/40 border-white/80 shadow-sm hover:border-primary-100 hover:bg-white'
-                          }`}>
-                          <div className="flex items-start gap-6">
-                            <div className={`p-4 rounded-3xl ${field.completed ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'} transition-all duration-500 group-hover:scale-110 shadow-sm`}>
-                              <Icon size={24} />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-center mb-3">
-                                <label className="text-[11px] font-black text-gray-950 uppercase tracking-[0.2em]">{field.label}</label>
-                                {field.completed && <CheckCircle2 size={18} className="text-emerald-500 animate-in zoom-in duration-300" />}
+          {/* RIGHT CONTENT */}
+          <div className="flex-1 flex flex-col h-full bg-white relative overflow-hidden">
+            <button onClick={onClose} className="absolute top-6 right-6 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hidden md:flex"><X size={24} /></button>
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 md:p-12 custom-scrollbar">
+              <div className="max-w-3xl mx-auto">
+                <div className="mb-10"><h3 className="text-2xl font-bold text-gray-900 mb-2">My Information</h3><p className="text-gray-500">Update your profile to stand out to clients.</p></div>
+                {['Basic', 'Professional', 'Expert'].map((cat) => {
+                  const fields = profileFields.filter(f => f.category === cat);
+                  if (fields.length === 0) return null;
+                  return (
+                    <div key={cat} className="mb-12 last:mb-0">
+                      <div className="flex items-center gap-4 mb-6"><span className="text-xs font-bold text-primary-600 uppercase tracking-widest bg-primary-50 px-3 py-1 rounded-full">{cat} Details</span><div className="h-px bg-gray-100 flex-1" /></div>
+                      <div className="grid grid-cols-1 gap-4">
+                        {fields.map((field) => (
+                          <div key={field.id} className={`transition-all duration-300 ${editingField === field.id ? 'ring-2 ring-primary-100 rounded-xl bg-gray-50/50 p-2 -m-2' : ''}`}>
+                            {editingField === field.id ? (
+                              renderFieldInput(field)
+                            ) : (
+                              <div onClick={() => handleEdit(field)} className="group flex items-start gap-4 p-4 bg-white border border-gray-100 rounded-xl hover:border-primary-200 hover:shadow-md transition-all cursor-pointer">
+                                <div className={`p-3 rounded-lg ${field.completed ? 'bg-primary-50 text-primary-600' : 'bg-gray-100 text-gray-400'} group-hover:bg-primary-600 group-hover:text-white transition-colors`}><field.icon size={20} /></div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between items-start">
+                                    <div><p className="text-sm font-medium text-gray-500 mb-0.5">{field.label}</p><p className="text-base font-semibold text-gray-900">{field.value ? (field.id === 'photoURL' ? 'Photo Uploaded' : field.value) : <span className="text-gray-400 italic font-normal">Not set</span>}</p></div>
+                                    {field.completed ? <CheckCircle2 size={18} className="text-green-500" /> : <div className="w-2 h-2 rounded-full bg-red-400 mt-2" />}
+                                  </div>
+                                </div>
                               </div>
-                              {renderFieldInput(field)}
-                            </div>
+                            )}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Done Action */}
-            <div className="pt-12 flex justify-between items-center">
-              <p className="text-gray-400 text-[11px] font-bold uppercase tracking-widest italic">All changes are localized to your session</p>
-              <Button onClick={onClose} size="lg" className="px-12 py-4 rounded-3xl shadow-xl shadow-primary-500/20 font-black text-xs uppercase tracking-[0.2em] hover:scale-[1.05] active:scale-[0.98] transition-all">
-                Finalize Configuration
-              </Button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+            <div className="p-6 border-t border-gray-100 bg-white z-10 flex justify-end"><Button onClick={onClose} size="lg" className="px-8 bg-gray-900 text-white hover:bg-black rounded-xl">Done</Button></div>
           </div>
         </motion.div>
       </div>

@@ -27,7 +27,11 @@ const SignInPage = () => {
   React.useEffect(() => {
     if (user && userProfile && !isGoogleSigningIn.current) {
       if (userProfile.onboarded) {
-        const role = (Array.isArray(userProfile.role) && userProfile.role.includes("client")) || userProfile.role === "client" ? "client" : "freelancer";
+        const hasClientRole = Array.isArray(userProfile.role)
+          ? userProfile.role.some(r => r.toLowerCase() === 'client')
+          : userProfile.role?.toLowerCase() === 'client';
+
+        const role = hasClientRole ? "client" : "freelancer";
         navigate(`/dashboard/${role}`, { replace: true });
       } else {
         navigate("/onboarding", { replace: true });

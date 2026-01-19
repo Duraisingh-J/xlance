@@ -26,6 +26,7 @@ import PostJobPage from "./pages/PostJobPage";
 import CreateProfilePage from "./pages/CreateProfilePage";
 import ClientJobsPage from "./pages/ClientJobsPage";
 import ClientTalentPage from "./pages/ClientTalentPage";
+import TalentPage from "./pages/TalentPage";
 
 function AppLayout() {
   const { authLoading, error, user } = useAuth(); // Get user
@@ -65,6 +66,7 @@ function AppLayout() {
       <main className={`flex-1 flex flex-col ${!showFooter ? 'min-h-0' : ''}`}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/talent" element={<TalentPage />} />
           <Route path="/auth/signin" element={<SignInPage />} />
           <Route path="/auth/signup" element={<SignUpPage />} />
 

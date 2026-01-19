@@ -105,8 +105,8 @@ const Reports = () => {
   // Robustly check for client role (handles string 'client' or array ['client'])
   const isClient = useMemo(() => {
     if (!userProfile?.role) return false;
-    if (Array.isArray(userProfile.role)) return userProfile.role.includes('client');
-    return userProfile.role === 'client';
+    if (Array.isArray(userProfile.role)) return userProfile.role.some(r => r.toLowerCase() === 'client');
+    return userProfile.role?.toLowerCase() === 'client';
   }, [userProfile]);
 
   // Select data based on role

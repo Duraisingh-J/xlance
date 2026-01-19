@@ -89,6 +89,10 @@ const JobDetailsPage = () => {
         }
     };
 
+    const isFreelancer = Array.isArray(userProfile?.role)
+        ? userProfile.role.some(r => r.toLowerCase() === 'freelancer')
+        : userProfile?.role?.toLowerCase() === 'freelancer';
+
     if (loading) return <div className="flex justify-center pt-20"><LoadingSpinner /></div>;
     // ...
 
@@ -126,7 +130,7 @@ const JobDetailsPage = () => {
                     </Card>
 
                     {/* Proposal Form */}
-                    {userProfile?.role?.includes('freelancer') && job.status === 'open' && (
+                    {isFreelancer && job.status === 'open' && (
                         <Card className="p-4 md:p-8">
                             <h2 className="text-xl font-bold mb-4">Submit a Proposal</h2>
                             <form onSubmit={handleSubmitProposal} className="space-y-4" noValidate>
