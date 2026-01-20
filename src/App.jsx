@@ -29,6 +29,7 @@ import ClientJobsPage from "./pages/ClientJobsPage";
 import ClientTalentPage from "./pages/ClientTalentPage";
 import TalentPage from "./pages/TalentPage";
 import FreelancerProfilePage from "./pages/FreelancerProfilePage";
+import ClientProfilePage from "./pages/ClientProfilePage";
 
 function AppLayout() {
   const { authLoading, error, user } = useAuth(); // Get user
@@ -171,6 +172,15 @@ function AppLayout() {
             element={
               <ProtectedRoute>
                 <ClientTalentPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/client-profile/:id"
+            element={
+              <ProtectedRoute>
+                <ClientProfilePage />
               </ProtectedRoute>
             }
           />
