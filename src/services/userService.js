@@ -404,5 +404,22 @@ export const userService = {
             console.error("Error fetching freelancers:", error);
             return [];
         }
+    },
+
+    // Get Single Client by ID
+    getClientById: async (clientId) => {
+        try {
+            const docRef = doc(db, 'users', 'directory', 'clients', clientId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() };
+            } else {
+                return null;
+            }
+        } catch (error) {
+            console.error("Error fetching client details:", error);
+            throw error;
+        }
     }
 };
